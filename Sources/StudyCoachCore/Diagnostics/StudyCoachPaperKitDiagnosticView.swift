@@ -254,11 +254,20 @@ private final class PaperKitDiagnosticViewController: UIViewController {
     }
 
     @objc private func showInsertMenuAction(_ sender: UIButton) {
+        guard let editDelegate = (paperController as AnyObject)
+            as? any MarkupEditViewController.Delegate else {
+            setStatus(
+                "이 Swift Playgrounds 버전은 PaperKit 요소 삽입 delegate를 노출하지 않습니다. 필기 도구 진단은 계속 사용할 수 있습니다.",
+                isError: true
+            )
+            return
+        }
+
         let editor = MarkupEditViewController(
             supportedFeatureSet: .latest,
             additionalActions: []
         )
-        editor.delegate = paperController
+        editor.delegate = editDelegate
         editor.modalPresentationStyle = .popover
         editor.popoverPresentationController?.sourceView = sender
         editor.popoverPresentationController?.sourceRect = sender.bounds

@@ -52,7 +52,10 @@ PaperKit module, even if the device itself runs iPadOS 26.
 
 - **도구 표시**: makes the `PKToolPicker` active for the PaperKit controller.
 - **요소 +**: presents PaperKit's `MarkupEditViewController` for shapes, lines,
-  text, images, and other supported elements.
+  text, images, and other supported elements. Some Swift Playgrounds builds do
+  not expose `PaperMarkupViewController`'s edit-delegate conformance even on
+  iPadOS 26. In that case this button reports the limitation while the drawing,
+  eraser, zoom, and persistence tests remain available.
 - **실행 취소 / 다시 실행**: calls the PaperKit controller's undo manager.
 - **저장**: serializes the current `PaperMarkup` using
   `dataRepresentation()` and writes it atomically under Application Support.
