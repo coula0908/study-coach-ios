@@ -14,8 +14,8 @@ Do not mark the MVP complete until the Pencil input fix and the remaining accept
 ## Apple toolchain record
 
 - Date: 2026-09-01
-- GitHub commit: `a24a5352209039f0abb1c564090e5b1560397f2a`
-- Workflow run: <https://github.com/coula0908/study-coach-ios/actions/runs/33469467319>
+- GitHub commit: `9497e1d594be1b16de2bb82919c5eeb8752f1d9c`
+- Workflow run: <https://github.com/coula0908/study-coach-ios/actions/runs/33478587399>
 - Toolchain: Xcode 16.4 (build 16F6), iOS Simulator SDK 18.5
 - Build result: `StudyCoachCore` and `StudyCoachCoreTests` compiled successfully for iOS Simulator
 - Test destination: an available iPad Simulator selected dynamically by the workflow
