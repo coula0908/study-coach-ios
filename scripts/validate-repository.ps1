@@ -8,6 +8,7 @@ $requiredPaths = @(
     'Sources\StudyCoachCore\App\StudyCoachSessionModel.swift'
     'Sources\StudyCoachCore\App\StudyCoachWorkspaceView.swift'
     'Sources\StudyCoachCore\Diagnostics\StudyCoachPaperKitDiagnosticView.swift'
+    'Sources\StudyCoachCore\Diagnostics\StudyCoachPaperKitPDFDiagnosticView.swift'
     'Sources\StudyCoachCore\PDF\PDFKitContainerView.swift'
     'Sources\StudyCoachCore\PDF\PDFWorkspaceView.swift'
     'Sources\StudyCoachCore\Annotations\PencilPageCanvasView.swift'
@@ -16,6 +17,7 @@ $requiredPaths = @(
     'Tests\StudyCoachCoreTests\StudyCoachCoreSmokeTests.swift'
     'THIRD_PARTY_NOTICES.md'
     'docs\PAPERKIT_DIAGNOSTIC.md'
+    'docs\PAPERKIT_PDF_DIAGNOSTIC.md'
 )
 
 foreach ($relativePath in $requiredPaths) {
@@ -40,6 +42,9 @@ $pencilRecognizer = Get-Content -LiteralPath (
 ) -Raw
 $paperKitDiagnostic = Get-Content -LiteralPath (
     Join-Path $repositoryRoot 'Sources\StudyCoachCore\Diagnostics\StudyCoachPaperKitDiagnosticView.swift'
+) -Raw
+$paperKitPDFDiagnostic = Get-Content -LiteralPath (
+    Join-Path $repositoryRoot 'Sources\StudyCoachCore\Diagnostics\StudyCoachPaperKitPDFDiagnosticView.swift'
 ) -Raw
 
 foreach ($requiredManifestText in @(
@@ -79,6 +84,24 @@ foreach ($requiredDiagnosticText in @(
 
 if ($rootView.Contains('StudyCoachPaperKitDiagnosticView')) {
     throw 'StudyCoachRootView must not route production users into the PaperKit diagnostic.'
+}
+
+if ($rootView.Contains('StudyCoachPaperKitPDFDiagnosticView')) {
+    throw 'StudyCoachRootView must not route production users into the PaperKit PDF diagnostic.'
+}
+
+foreach ($requiredPaperKitPDFText in @(
+    'public struct StudyCoachPaperKitPDFDiagnosticView'
+    'PaperMarkupViewController('
+    'PaperKitPDFPageBackgroundView'
+    'CATiledLayer.self'
+    'PaperMarkup(dataRepresentation:'
+    'dataRepresentation()'
+    'pageIndex: Int'
+)) {
+    if (-not $paperKitPDFDiagnostic.Contains($requiredPaperKitPDFText)) {
+        throw "PaperKit PDF diagnostic is missing: $requiredPaperKitPDFText"
+    }
 }
 
 if ($paperKitDiagnostic.Contains('editor.delegate = paperController')) {

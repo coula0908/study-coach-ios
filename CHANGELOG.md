@@ -1,5 +1,17 @@
 # Changelog
 
+## Unreleased — PaperKit PDF-page diagnostic
+
+- Add public `StudyCoachPaperKitPDFDiagnosticView` without changing the
+  production root or PencilKit PDF overlays.
+- Import and locally retain a diagnostic PDF by SHA-256 content identity.
+- Render each crop-box-sized PDF page through a tiled view beneath PaperKit so
+  background and ink share PaperKit's pan and zoom transform.
+- Persist one atomic `PaperMarkup` per diagnostic document and page, including
+  page navigation and relaunch restoration.
+- Remove the redundant custom tool-display control from this second diagnostic;
+  the system PaperKit/PencilKit tool UI remains authoritative.
+
 ## Unreleased — Swift Playgrounds PaperKit compatibility
 
 - Avoid requiring compile-time exposure of `PaperMarkupViewController` as a

@@ -15,6 +15,7 @@ final class StudyCoachCoreSmokeTests: XCTestCase {
 
     func testPaperKitDiagnosticViewCanBeCreatedWithoutChangingProductionRoot() {
         _ = StudyCoachPaperKitDiagnosticView()
+        _ = StudyCoachPaperKitPDFDiagnosticView()
         _ = StudyCoachRootView()
     }
 

@@ -8,7 +8,7 @@
 - Swift Playgrounds package import: passed on physical iPadOS 26 with tag `0.1.0`
 - PDF display and navigation: passed on physical iPadOS 26; no stutter reported
 - PencilKit behavior: Apple Pencil writing passed on physical iPadOS 26 with `0.1.2`; the user reported that the app launched and handwriting worked correctly
-- PaperKit diagnostic: implemented independently from the production root; Xcode 16.4 and Xcode 26.6 CI passed, while physical Swift Playgrounds testing remains pending
+- PaperKit standalone diagnostic: Xcode 16.4 and Xcode 26.6 CI passed; physical iPadOS 26 launch, writing feel, and high-zoom ink quality passed with `0.1.4`
 
 Do not mark the MVP complete until the Pencil input fix and the remaining acceptance checks pass in Swift Playgrounds on the target iPad.
 
@@ -119,4 +119,30 @@ high-resolution rendering requirements.
   Swift Playgrounds toolchain did not expose it to the package compiler
 - Follow-up: replace the unconditional delegate assignment with a guarded
   runtime compatibility cast so the core PaperKit drawing diagnostic can launch
+
+### Physical PaperKit standalone pass: 0.1.4
+
+- Date: 2026-09-01
+- Device OS: iPadOS 26
+- Swift Playgrounds package version: `0.1.4`
+- Package compilation and diagnostic launch: passed
+- Apple Pencil writing feel: passed; user reported it is the desired feel
+- High-zoom ink quality: passed; user reported no problem while enlarging
+- System drawing tools: visible at the bottom and usable
+- `도구 표시` button: no visible effect because the system tool picker was
+  already shown; omit this redundant control from later app UI
+- Standalone PaperKit decision: passed; proceed to the isolated PDF-page test
+
+## PaperKit PDF-page diagnostic
+
+- Production entry point: unchanged `StudyCoachRootView()`
+- Diagnostic entry point: `StudyCoachPaperKitPDFDiagnosticView()`
+- Rendering design: a crop-box-sized PDF page view backed by `CATiledLayer` is
+  PaperKit's content; PaperKit applies the same zoom transform to content and ink
+- Persistence: one diagnostic `PaperMarkup` per PDF content identity and page
+- Original PDF and production `.drawing` files: unchanged
+- Windows validation: pending
+- Xcode 16 fallback and Xcode 26 PaperKit compilation: pending
+- Physical iPadOS 26 PDF alignment and page restoration: pending
+- Procedure: `docs/PAPERKIT_PDF_DIAGNOSTIC.md`
 
