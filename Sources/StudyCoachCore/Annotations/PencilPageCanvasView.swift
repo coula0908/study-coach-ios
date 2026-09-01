@@ -16,14 +16,6 @@ final class PencilPageCanvasView: PKCanvasView {
         configureCanvas()
     }
 
-    override func hitTest(_ point: CGPoint, with event: UIEvent?) -> UIView? {
-        if let touches = event?.allTouches,
-           !touches.contains(where: { $0.type == .pencil }) {
-            return nil
-        }
-        return super.hitTest(point, with: event)
-    }
-
     override func layoutSubviews() {
         super.layoutSubviews()
         contentInset = .zero
@@ -36,6 +28,8 @@ final class PencilPageCanvasView: PKCanvasView {
     private func configureCanvas() {
         backgroundColor = .clear
         isOpaque = false
+        // Let PencilKit classify Pencil input. PDFView's ancestor gesture
+        // recognizers continue to handle finger pan and pinch gestures.
         drawingPolicy = .pencilOnly
         isScrollEnabled = false
         bounces = false

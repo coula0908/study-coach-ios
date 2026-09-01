@@ -6,7 +6,7 @@ The first MVP focuses only on a stable PDF and Apple Pencil workflow. AI coachin
 
 ## Current stage
 
-The first PDF-and-Pencil MVP is implemented and passes Apple-toolchain compilation and unit tests. Physical iPad and Swift Playgrounds interaction validation is still required.
+The first PDF-and-Pencil MVP is implemented and passes Apple-toolchain compilation and unit tests. On physical iPadOS 26 hardware, package import, app launch, PDF display, navigation, and performance passed. The first Pencil input-routing fix is awaiting a physical-device retest.
 
 - Swift Package manifest and public `StudyCoachRootView`
 - Files-app PDF importer
@@ -54,7 +54,7 @@ After these files are committed and pushed to GitHub:
    https://github.com/coula0908/study-coach-ios
    ```
 
-5. During development, select the `main` branch if Swift Playgrounds asks for a dependency rule. After the first stable milestone, use a tagged release.
+5. Select the latest `0.1.x` release. Use the `main` branch only when intentionally testing unreleased development changes.
 6. Enable the `StudyCoachCore` product and add it to the project.
 
 Use this minimal `ContentView`:

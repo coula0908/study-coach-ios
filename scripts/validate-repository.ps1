@@ -25,6 +25,9 @@ $manifest = Get-Content -LiteralPath (Join-Path $repositoryRoot 'Package.swift')
 $rootView = Get-Content -LiteralPath (
     Join-Path $repositoryRoot 'Sources\StudyCoachCore\App\StudyCoachRootView.swift'
 ) -Raw
+$pageCanvas = Get-Content -LiteralPath (
+    Join-Path $repositoryRoot 'Sources\StudyCoachCore\Annotations\PencilPageCanvasView.swift'
+) -Raw
 
 foreach ($requiredManifestText in @(
     '// swift-tools-version: 5.9'
@@ -44,6 +47,14 @@ foreach ($requiredRootViewText in @(
     if (-not $rootView.Contains($requiredRootViewText)) {
         throw "StudyCoachRootView is missing: $requiredRootViewText"
     }
+}
+
+if (-not $pageCanvas.Contains('drawingPolicy = .pencilOnly')) {
+    throw 'PencilPageCanvasView must keep PencilKit pencil-only drawing policy.'
+}
+
+if ($pageCanvas.Contains('override func hitTest')) {
+    throw 'PencilPageCanvasView must not route input by overriding hitTest; it can discard Pencil touches on a physical iPad.'
 }
 
 Push-Location $repositoryRoot

@@ -5,10 +5,11 @@
 - Repository structure: passed `scripts/validate-repository.ps1` on 2026-09-01
 - Apple toolchain compilation: passed on GitHub Actions with Xcode 16.4 on 2026-09-01
 - iPad Simulator unit tests: 3 passed, 0 failed on 2026-09-01
-- Swift Playgrounds package import: not yet tested
-- PDFKit/PencilKit behavior: implemented, not yet device-tested
+- Swift Playgrounds package import: passed on physical iPadOS 26 with tag `0.1.0`
+- PDF display and navigation: passed on physical iPadOS 26; no stutter reported
+- PencilKit behavior: pen and highlighter failed in `0.1.0`; input-routing fix implemented and awaiting retest
 
-Do not mark the MVP complete until the package has been loaded and exercised in Swift Playgrounds on the target iPad.
+Do not mark the MVP complete until the Pencil input fix and the remaining acceptance checks pass in Swift Playgrounds on the target iPad.
 
 ## Apple toolchain record
 
@@ -24,7 +25,21 @@ Do not mark the MVP complete until the package has been loaded and exercised in 
 
 ## iPad acceptance record
 
-Fill this section during each device pass.
+### Physical-device pass: 0.1.0
+
+- Date: 2026-09-01
+- iPadOS version: 26
+- Git tag: `0.1.0`
+- Package import result: passed after adding the semantic-version tag
+- App launch and PDF display: passed
+- PDF navigation and performance: passed; the user reported no stutter
+- Pencil/finger separation result: failed
+- Observed issue: pen and highlighter did not draw; Apple Pencil gestures moved the PDF instead
+- Root cause: `PencilPageCanvasView.hitTest` attempted to identify Pencil touches before PencilKit's drawing recognizer received them and could return `nil` for real Pencil input
+- Fix: remove the custom `hitTest` override and use PencilKit's `.pencilOnly` drawing policy
+- Fix status: implemented after the `0.1.0` device pass; physical retest required
+
+### Next physical-device pass
 
 - Date:
 - iPad model:
