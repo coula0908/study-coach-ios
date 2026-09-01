@@ -141,8 +141,8 @@ high-resolution rendering requirements.
   PaperKit's content; PaperKit applies the same zoom transform to content and ink
 - Persistence: one diagnostic `PaperMarkup` per PDF content identity and page
 - Original PDF and production `.drawing` files: unchanged
-- Windows validation: pending
-- Xcode 16 fallback and Xcode 26 PaperKit compilation: pending
+- Windows validation: passed (`scripts/validate-repository.ps1` and `git diff --check`) on 2026-09-01
+- Xcode 16 fallback and Xcode 26 PaperKit compilation: passed in pull-request workflow run 17 on 2026-09-01
 - Physical iPadOS 26 PDF alignment and page restoration: pending
 - Procedure: `docs/PAPERKIT_PDF_DIAGNOSTIC.md`
 
