@@ -6,7 +6,7 @@ The first MVP focuses only on a stable PDF and Apple Pencil workflow. AI coachin
 
 ## Current stage
 
-The first PDF-and-Pencil MVP is implemented and awaiting Apple-toolchain and device validation.
+The first PDF-and-Pencil MVP is implemented and passes Apple-toolchain compilation and unit tests. Physical iPad and Swift Playgrounds interaction validation is still required.
 
 - Swift Package manifest and public `StudyCoachRootView`
 - Files-app PDF importer
@@ -84,7 +84,7 @@ Read [the architecture contract](docs/ARCHITECTURE.md) before implementing the v
 
 ## Host limitation
 
-The current development host is Windows and does not have the Swift toolchain or Apple platform SDKs installed. Repository structure can be checked here, but SwiftUI, PDFKit, and PencilKit compilation must be verified with an Apple toolchain or directly in Swift Playgrounds on iPad. A successful iPad package-import test is the next required runtime checkpoint.
+The current development host is Windows and does not have the Swift toolchain or Apple platform SDKs installed. Repository structure is checked locally, while GitHub Actions compiles the package and runs its unit tests with Xcode on an iPad Simulator. A successful package import and interaction pass in Swift Playgrounds on the target iPadOS 26 device is the next required runtime checkpoint.
 
 Run the local static validation with:
 

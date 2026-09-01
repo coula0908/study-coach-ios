@@ -76,4 +76,4 @@ try {
 }
 
 Write-Output 'StudyCoachCore repository validation passed.'
-Write-Output 'Apple-framework compilation still requires the GitHub macOS workflow or Swift Playgrounds.'
+Write-Output 'This Windows check does not compile Apple frameworks; use the GitHub macOS workflow or Swift Playgrounds for that evidence.'
