@@ -13,8 +13,8 @@ Do not mark the MVP complete until the package has been loaded and exercised in 
 ## Apple toolchain record
 
 - Date: 2026-09-01
-- GitHub commit: `46924e4a15dbfe7d72eaaf086e6e6feea3a32b61`
-- Workflow run: <https://github.com/coula0908/study-coach-ios/actions/runs/33468993828>
+- GitHub commit: `a24a5352209039f0abb1c564090e5b1560397f2a`
+- Workflow run: <https://github.com/coula0908/study-coach-ios/actions/runs/33469467319>
 - Toolchain: Xcode 16.4 (build 16F6), iOS Simulator SDK 18.5
 - Build result: `StudyCoachCore` and `StudyCoachCoreTests` compiled successfully for iOS Simulator
 - Test destination: an available iPad Simulator selected dynamically by the workflow
