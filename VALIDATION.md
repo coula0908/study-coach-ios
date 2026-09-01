@@ -7,7 +7,8 @@
 - iPad Simulator unit tests: 4 passed, 0 failed on 2026-09-01
 - Swift Playgrounds package import: passed on physical iPadOS 26 with tag `0.1.0`
 - PDF display and navigation: passed on physical iPadOS 26; no stutter reported
-- PencilKit behavior: pen, highlighter, and eraser failed on physical iPadOS 26 in both `0.1.0` and `0.1.1`; Pumice-derived Pencil-only recognizer implemented for `0.1.2` and awaiting retest
+- PencilKit behavior: Apple Pencil writing passed on physical iPadOS 26 with `0.1.2`; the user reported that the app launched and handwriting worked correctly
+- PaperKit diagnostic: implemented independently from the production root; Apple CI and physical Swift Playgrounds testing pending
 
 Do not mark the MVP complete until the Pencil input fix and the remaining acceptance checks pass in Swift Playgrounds on the target iPad.
 
@@ -37,6 +38,20 @@ Do not mark the MVP complete until the Pencil input fix and the remaining accept
 - Not covered by CI: Swift Playgrounds package import, Apple Pencil/finger interaction, visual PDF coordinate alignment, background/relaunch behavior on physical iPadOS 26 hardware
 
 ## iPad acceptance record
+
+### Physical-device pass: 0.1.2
+
+- Date: 2026-09-01
+- iPadOS version: 26
+- Git tag: `0.1.2`
+- Package import and app launch: passed
+- Apple Pencil writing: passed; the user reported that writing works correctly
+- Production root preserved: yes
+- Not yet reported for this pass: highlighter, both eraser behaviors, relaunch restoration, rotated/cropped pages, and maximum-zoom coordinate alignment
+
+This confirms the Pumice-derived Pencil input route reached the physical Pencil.
+It does not accept the later straight-line, partial-eraser, double-tap, or
+high-resolution rendering requirements.
 
 ### Physical-device pass: 0.1.0
 
@@ -81,4 +96,16 @@ Do not mark the MVP complete until the Pencil input fix and the remaining accept
 - Relaunch restoration result:
 - Large-PDF observation:
 - Known issues:
+
+## PaperKit standalone diagnostic
+
+- Production entry point: unchanged `StudyCoachRootView()`
+- Diagnostic entry point: `StudyCoachPaperKitDiagnosticView()`
+- PDFKit integration: intentionally not implemented in this spike
+- Windows validation: passed (`scripts/validate-repository.ps1` and `git diff --check`) on 2026-09-01
+- Xcode 16 fallback compilation: pending
+- Xcode 26 PaperKit compilation: pending
+- iPad Simulator construction smoke test: pending
+- Physical iPadOS 26 Swift Playgrounds import and interaction checklist: pending
+- Procedure: `docs/PAPERKIT_DIAGNOSTIC.md`
 

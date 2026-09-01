@@ -1,5 +1,19 @@
 # Changelog
 
+## Unreleased — PaperKit diagnostic spike
+
+- Add a public, opt-in `StudyCoachPaperKitDiagnosticView` without changing
+  `StudyCoachRootView` or the production PDF annotation engine.
+- Use Apple PaperKit APIs directly behind `canImport(PaperKit)` and iOS 26
+  availability guards, with a readable unavailable screen on older toolchains.
+- Exercise `PaperMarkupViewController`, `PKToolPicker`, PaperKit's insertion UI,
+  undo/redo, 8x zoom, and atomic `PaperMarkup` save/reload.
+- Compile both the fallback path on Xcode 16 and the real PaperKit path on an
+  Xcode 26 GitHub Actions runner.
+
+This spike must pass in Swift Playgrounds on the physical iPadOS 26 device
+before any PDFKit/PaperKit integration or production engine replacement.
+
 ## 0.1.2
 
 - Replace PencilKit's failing overlay input recognizer with the Pencil-only
