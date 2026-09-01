@@ -62,7 +62,7 @@ struct PDFKitContainerView: UIViewRepresentable {
     }
 
     @MainActor
-    final class Coordinator: NSObject, PDFPageOverlayViewProvider, PKCanvasViewDelegate {
+    final class Coordinator: NSObject, @preconcurrency PDFPageOverlayViewProvider, PKCanvasViewDelegate {
         var parent: PDFKitContainerView
 
         private weak var pdfView: PDFView?

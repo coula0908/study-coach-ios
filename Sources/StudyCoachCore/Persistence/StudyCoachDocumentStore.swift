@@ -75,6 +75,7 @@ actor StudyCoachDocumentStore {
         let documentDirectory = directory(for: documentID)
         let storedPDFURL = documentDirectory.appendingPathComponent("document.pdf")
         let drawingsURL = documentDirectory.appendingPathComponent("drawings", isDirectory: true)
+        var restoredLastPageIndex = 0
 
         do {
             try fileManager.createDirectory(at: drawingsURL, withIntermediateDirectories: true)
@@ -91,6 +92,7 @@ actor StudyCoachDocumentStore {
                 pageCount: previousMetadata?.pageCount,
                 lastPageIndex: previousMetadata?.lastPageIndex
             )
+            restoredLastPageIndex = metadata.lastPageIndex ?? 0
             try writeMetadata(metadata, for: documentID)
             defaults.set(documentID, forKey: lastDocumentKey)
         } catch {
@@ -101,7 +103,7 @@ actor StudyCoachDocumentStore {
             id: documentID,
             url: storedPDFURL,
             originalFilename: sourceURL.lastPathComponent,
-            lastPageIndex: metadata.lastPageIndex ?? 0
+            lastPageIndex: restoredLastPageIndex
         )
     }
 

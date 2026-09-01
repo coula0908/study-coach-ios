@@ -41,7 +41,7 @@ struct PDFWorkspaceView: View {
         .onAppear {
             pageInput = String(currentPageIndex + 1)
         }
-        .onChange(of: currentPageIndex) { newValue in
+        .onChange(of: currentPageIndex) { _, newValue in
             pageInput = String(newValue + 1)
         }
     }
