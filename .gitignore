@@ -60,3 +60,14 @@ fastlane/report.xml
 fastlane/Preview.html
 fastlane/screenshots/**/*.png
 fastlane/test_output
+
+# Study Coach local and private data
+.DS_Store
+.env
+.env.*
+!.env.example
+*.pdf
+*.drawing
+*.rmmzsave
+DerivedData/
+.swiftpm/xcode/package.xcworkspace/xcuserdata/
