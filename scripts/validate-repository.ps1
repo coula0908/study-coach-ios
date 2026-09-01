@@ -10,8 +10,10 @@ $requiredPaths = @(
     'Sources\StudyCoachCore\PDF\PDFKitContainerView.swift'
     'Sources\StudyCoachCore\PDF\PDFWorkspaceView.swift'
     'Sources\StudyCoachCore\Annotations\PencilPageCanvasView.swift'
+    'Sources\StudyCoachCore\Annotations\PencilStrokeGestureRecognizer.swift'
     'Sources\StudyCoachCore\Persistence\StudyCoachDocumentStore.swift'
     'Tests\StudyCoachCoreTests\StudyCoachCoreSmokeTests.swift'
+    'THIRD_PARTY_NOTICES.md'
 )
 
 foreach ($relativePath in $requiredPaths) {
@@ -27,6 +29,12 @@ $rootView = Get-Content -LiteralPath (
 ) -Raw
 $pageCanvas = Get-Content -LiteralPath (
     Join-Path $repositoryRoot 'Sources\StudyCoachCore\Annotations\PencilPageCanvasView.swift'
+) -Raw
+$pdfContainer = Get-Content -LiteralPath (
+    Join-Path $repositoryRoot 'Sources\StudyCoachCore\PDF\PDFKitContainerView.swift'
+) -Raw
+$pencilRecognizer = Get-Content -LiteralPath (
+    Join-Path $repositoryRoot 'Sources\StudyCoachCore\Annotations\PencilStrokeGestureRecognizer.swift'
 ) -Raw
 
 foreach ($requiredManifestText in @(
@@ -49,12 +57,46 @@ foreach ($requiredRootViewText in @(
     }
 }
 
-if (-not $pageCanvas.Contains('drawingPolicy = .pencilOnly')) {
-    throw 'PencilPageCanvasView must keep PencilKit pencil-only drawing policy.'
-}
-
 if ($pageCanvas.Contains('override func hitTest')) {
     throw 'PencilPageCanvasView must not route input by overriding hitTest; it can discard Pencil touches on a physical iPad.'
+}
+
+if (-not $pageCanvas.Contains('isUserInteractionEnabled = true')) {
+    throw 'PencilPageCanvasView must accept Pencil interaction immediately.'
+}
+
+foreach ($requiredCanvasText in @(
+    'drawingPolicy = .pencilOnly'
+    'drawingGestureRecognizer.isEnabled = false'
+    'PencilStrokeGestureRecognizer'
+    'PKStrokePoint('
+    'PKDrawing(strokes:'
+)) {
+    if (-not $pageCanvas.Contains($requiredCanvasText)) {
+        throw "PencilPageCanvasView is missing adopted Pencil routing: $requiredCanvasText"
+    }
+}
+
+foreach ($requiredRecognizerText in @(
+    'allowedTouchTypes = [NSNumber(value: UITouch.TouchType.pencil.rawValue)]'
+    'event.coalescedTouches(for: touch)'
+    'touch.type == .pencil'
+)) {
+    if (-not $pencilRecognizer.Contains($requiredRecognizerText)) {
+        throw "PencilStrokeGestureRecognizer is missing: $requiredRecognizerText"
+    }
+}
+
+foreach ($requiredInteractionText in @(
+    'enablePageOverlayInteraction(canvas, in: pdfView)'
+    'pdfView.documentView?.isUserInteractionEnabled = true'
+    'pdfView.documentView?.subviews.forEach'
+    'view.isUserInteractionEnabled = true'
+    'pdfView.isInMarkupMode = true'
+)) {
+    if (-not $pdfContainer.Contains($requiredInteractionText)) {
+        throw "PDFKitContainerView is missing overlay interaction setup: $requiredInteractionText"
+    }
 }
 
 Push-Location $repositoryRoot

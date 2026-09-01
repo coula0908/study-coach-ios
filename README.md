@@ -6,14 +6,14 @@ The first MVP focuses only on a stable PDF and Apple Pencil workflow. AI coachin
 
 ## Current stage
 
-The first PDF-and-Pencil MVP is implemented and passes Apple-toolchain compilation and unit tests. On physical iPadOS 26 hardware, package import, app launch, PDF display, navigation, and performance passed. The first Pencil input-routing fix is awaiting a physical-device retest.
+The first PDF-and-Pencil MVP is implemented and passes Apple-toolchain compilation and unit tests. On physical iPadOS 26 hardware, package import, app launch, PDF display, navigation, and performance passed. Device testing showed that PencilKit's overlay drawing recognizer still failed in `0.1.1`; `0.1.2` adopts the Pencil-only recognizer path from the MIT-licensed, App-Store-shipped Pumice app and awaits physical-device retesting.
 
 - Swift Package manifest and public `StudyCoachRootView`
 - Files-app PDF importer
 - Continuous PDFKit viewer with page navigation, direct page jump, zoom controls, and finger pan/zoom
 - Page-bound, lazily created PencilKit canvases
 - Pen, translucent highlighter, vector eraser, undo, redo, color, and width controls
-- Pencil-only drawing policy so finger touches reach PDFKit
+- Pumice-derived Pencil-only gesture routing so Pencil reaches the page canvas while finger gestures remain available to PDFKit
 - SHA-256 document identity
 - Atomic, per-page `PKDrawing` persistence outside the source PDF
 - Last document and last page restoration after relaunch
@@ -40,6 +40,11 @@ VALIDATION.md
 ```
 
 The package intentionally has no external dependencies.
+
+The Pencil-only recognizer is source-adapted from the MIT-licensed Pumice app;
+see [third-party notices](THIRD_PARTY_NOTICES.md). Keeping this small component
+in source form avoids an Xcode-only binary dependency and remains compatible
+with Swift Playgrounds.
 
 ## Add the package in Swift Playgrounds
 
@@ -97,4 +102,5 @@ powershell -ExecutionPolicy Bypass -File .\scripts\validate-repository.ps1
 - Apple documents adding a public GitHub Swift Package directly to an app playground: <https://developer.apple.com/documentation/swift-playgrounds/add-a-swift-package>
 - Apple introduced `PDFPageOverlayViewProvider` specifically for page-bound views such as PencilKit canvases: <https://developer.apple.com/videos/play/wwdc2022/10089/>
 - Apple's PencilKit guidance defines `.pencilOnly` for Pencil drawing while finger input remains available for scrolling and selection: <https://developer.apple.com/videos/play/wwdc2020/10107/>
+- Pumice is an MIT-licensed iPad PDF annotation app whose iPadOS 26-tested Pencil-only recognizer is adapted for this package: <https://github.com/theagitist/Pumice>
 - Goodnotes' public toolbar documentation was used only as an interaction reference for keeping writing tools and controls quickly accessible: <https://support.goodnotes.com/hc/en-us/articles/8900755183631-Customize-the-toolbar>

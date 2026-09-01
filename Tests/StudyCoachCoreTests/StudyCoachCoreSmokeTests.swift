@@ -1,3 +1,5 @@
+import PencilKit
+import UIKit
 import XCTest
 @testable import StudyCoachCore
 
@@ -5,6 +7,34 @@ import XCTest
 final class StudyCoachCoreSmokeTests: XCTestCase {
     func testRootViewCanBeCreated() {
         _ = StudyCoachRootView()
+    }
+
+    func testAdoptedPencilPathCreatesPersistedStrokeAndSupportsUndoRedo() throws {
+        let canvas = PencilPageCanvasView(frame: CGRect(x: 0, y: 0, width: 500, height: 700))
+        let pencilRecognizer = canvas.gestureRecognizers?
+            .compactMap { $0 as? PencilStrokeGestureRecognizer }
+            .first
+
+        XCTAssertFalse(canvas.drawingGestureRecognizer.isEnabled)
+        XCTAssertEqual(
+            pencilRecognizer?.allowedTouchTypes,
+            [NSNumber(value: UITouch.TouchType.pencil.rawValue)]
+        )
+
+        let path = UIBezierPath()
+        path.move(to: CGPoint(x: 30, y: 40))
+        path.addLine(to: CGPoint(x: 90, y: 110))
+        path.addLine(to: CGPoint(x: 150, y: 170))
+        canvas.pencilStrokeDidFinish(path: path)
+
+        XCTAssertEqual(canvas.drawing.strokes.count, 1)
+        let restored = try PKDrawing(data: canvas.drawing.dataRepresentation())
+        XCTAssertEqual(restored.strokes.count, 1)
+
+        canvas.performUndo()
+        XCTAssertTrue(canvas.drawing.strokes.isEmpty)
+        canvas.performRedo()
+        XCTAssertEqual(canvas.drawing.strokes.count, 1)
     }
 
     func testDrawingDataRoundTripsByDocumentAndPage() async throws {

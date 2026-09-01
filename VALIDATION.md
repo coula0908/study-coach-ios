@@ -7,7 +7,7 @@
 - iPad Simulator unit tests: 3 passed, 0 failed on 2026-09-01
 - Swift Playgrounds package import: passed on physical iPadOS 26 with tag `0.1.0`
 - PDF display and navigation: passed on physical iPadOS 26; no stutter reported
-- PencilKit behavior: pen and highlighter failed in `0.1.0`; input-routing fix implemented and awaiting retest
+- PencilKit behavior: pen, highlighter, and eraser failed on physical iPadOS 26 in both `0.1.0` and `0.1.1`; Pumice-derived Pencil-only recognizer implemented for `0.1.2` and awaiting retest
 
 Do not mark the MVP complete until the Pencil input fix and the remaining acceptance checks pass in Swift Playgrounds on the target iPad.
 
@@ -38,6 +38,20 @@ Do not mark the MVP complete until the Pencil input fix and the remaining accept
 - Root cause: `PencilPageCanvasView.hitTest` attempted to identify Pencil touches before PencilKit's drawing recognizer received them and could return `nil` for real Pencil input
 - Fix: remove the custom `hitTest` override and use PencilKit's `.pencilOnly` drawing policy
 - Fix status: implemented after the `0.1.0` device pass; physical retest required
+
+### Physical-device pass: 0.1.1
+
+- Date: 2026-09-01
+- iPadOS version: 26
+- Git tag: `0.1.1`
+- Package update result: passed; the `0.1.1` package was explicitly selected and added
+- App launch and PDF display: passed
+- Pencil/finger separation result: failed
+- Observed issue: pen, highlighter, and eraser did not act on the canvas; Apple Pencil input continued to move the PDF
+- Root cause: removing the custom canvas `hitTest` override was insufficient; on iPadOS 26, PencilKit's drawing recognizer can still fail to activate inside a PDFKit page overlay and let Pencil input fall through to PDF scrolling
+- Follow-up implementation: adopt the MIT-licensed, App-Store-shipped Pumice Pencil-only `UIGestureRecognizer` input path; disable PencilKit's failing internal drawing recognizer while retaining `PKCanvasView` for rendering and `PKDrawing` persistence
+- Additional setup: install the overlay provider before loading the PDF, enable markup mode, and enable the visible PDF page containers
+- Follow-up fix status: implemented for `0.1.2`; physical retest required
 
 ### Next physical-device pass
 

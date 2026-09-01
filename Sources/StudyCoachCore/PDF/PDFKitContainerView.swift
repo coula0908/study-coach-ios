@@ -24,8 +24,9 @@ struct PDFKitContainerView: UIViewRepresentable {
         pdfView.pageBreakMargins = UIEdgeInsets(top: 12, left: 12, bottom: 12, right: 12)
         pdfView.autoScales = true
         pdfView.maxScaleFactor = 6
-        pdfView.document = document
         pdfView.pageOverlayViewProvider = context.coordinator
+        pdfView.isInMarkupMode = true
+        pdfView.document = document
 
         context.coordinator.attach(to: pdfView)
         proxy.pdfView = pdfView
@@ -62,7 +63,7 @@ struct PDFKitContainerView: UIViewRepresentable {
     }
 
     @MainActor
-    final class Coordinator: NSObject, @preconcurrency PDFPageOverlayViewProvider, PKCanvasViewDelegate {
+    final class Coordinator: NSObject, @preconcurrency PDFPageOverlayViewProvider {
         var parent: PDFKitContainerView
 
         private weak var pdfView: PDFView?
@@ -124,7 +125,10 @@ struct PDFKitContainerView: UIViewRepresentable {
             let canvas = PencilPageCanvasView(frame: .zero)
             canvas.documentID = parent.documentID
             canvas.pageIndex = pageIndex
-            canvas.isUserInteractionEnabled = false
+            canvas.onDrawingChanged = { [weak self, weak canvas] in
+                guard let self, let canvas else { return }
+                self.scheduleSave(canvas)
+            }
             parent.toolConfiguration.apply(to: canvas)
             let key = DrawingKey(documentID: canvas.documentID, pageIndex: pageIndex)
             canvases[key] = WeakCanvas(canvas)
@@ -133,8 +137,6 @@ struct PDFKitContainerView: UIViewRepresentable {
                 if let drawing = try? PKDrawing(data: cachedData) {
                     canvas.drawing = drawing
                 }
-                canvas.delegate = self
-                canvas.isUserInteractionEnabled = true
                 updateActiveCanvas()
                 return canvas
             }
@@ -147,10 +149,15 @@ struct PDFKitContainerView: UIViewRepresentable {
                 guard self.canvases[key]?.value === canvas else { return }
 
                 if let data, let drawing = try? PKDrawing(data: data) {
-                    canvas.drawing = drawing
+                    let liveDrawing = canvas.drawing
+                    if liveDrawing.strokes.isEmpty {
+                        canvas.drawing = drawing
+                    } else if !drawing.strokes.isEmpty {
+                        canvas.drawing = PKDrawing(
+                            strokes: drawing.strokes + liveDrawing.strokes
+                        )
+                    }
                 }
-                canvas.delegate = self
-                canvas.isUserInteractionEnabled = true
                 self.updateActiveCanvas()
             }
 
@@ -159,6 +166,7 @@ struct PDFKitContainerView: UIViewRepresentable {
 
         func pdfView(_ pdfView: PDFView, willDisplayOverlayView overlayView: UIView, for page: PDFPage) {
             guard let canvas = overlayView as? PencilPageCanvasView else { return }
+            enablePageOverlayInteraction(canvas, in: pdfView)
             parent.toolConfiguration.apply(to: canvas)
             updateActiveCanvas()
         }
@@ -173,11 +181,6 @@ struct PDFKitContainerView: UIViewRepresentable {
             if parent.proxy.activeCanvas === canvas {
                 parent.proxy.activeCanvas = nil
             }
-        }
-
-        func canvasViewDrawingDidChange(_ canvasView: PKCanvasView) {
-            guard let canvas = canvasView as? PencilPageCanvasView else { return }
-            scheduleSave(canvas)
         }
 
         func updateTool(_ configuration: AnnotationToolConfiguration) {
@@ -217,6 +220,25 @@ struct PDFKitContainerView: UIViewRepresentable {
                 pageIndex: parent.currentPageIndex
             )
             parent.proxy.activeCanvas = canvases[key]?.value
+        }
+
+        private func enablePageOverlayInteraction(_ overlayView: UIView, in pdfView: PDFView) {
+            pdfView.isUserInteractionEnabled = true
+            pdfView.documentView?.isUserInteractionEnabled = true
+
+            // PDFKit may create page container views with interaction disabled.
+            // Enable the visible page containers as well as the overlay's exact
+            // ancestor chain without depending on PDFKit's private class names.
+            pdfView.documentView?.subviews.forEach {
+                $0.isUserInteractionEnabled = true
+            }
+
+            overlayView.isUserInteractionEnabled = true
+            var ancestor = overlayView.superview
+            while let view = ancestor, view !== pdfView {
+                view.isUserInteractionEnabled = true
+                ancestor = view.superview
+            }
         }
 
         private func scheduleSave(_ canvas: PencilPageCanvasView) {

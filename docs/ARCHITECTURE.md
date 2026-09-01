@@ -44,10 +44,18 @@ Use a page-overlay provider supported by PDFKit rather than a global canvas. The
 1. PDFKit asks for an overlay for a visible page.
 2. The package creates or reuses a lightweight page canvas.
 3. The package restores that page's `PKDrawing`.
-4. Pencil input is enabled and finger drawing is disabled so PDF gestures remain available.
-5. Changes are autosaved with a short debounce.
-6. When the overlay is about to be discarded, pending drawing data is saved immediately.
-7. The canvas is released so large PDFs do not create a canvas for every page.
+4. PencilKit's internal overlay drawing recognizer is disabled because it did
+   not activate reliably on the target iPadOS 26 device.
+5. A Pencil-only `UIGestureRecognizer`, adapted from the MIT-licensed Pumice
+   app's iPadOS 26-tested implementation, collects coalesced Pencil samples.
+   Finger touches are rejected and remain available to PDFKit.
+6. The recognizer converts completed strokes into `PKStroke` values, while
+   `PKCanvasView` remains responsible for rendering and `PKDrawing` storage.
+7. When PDFKit displays an overlay, interaction is enabled on the canvas, its
+   page-container ancestors, and the document view.
+8. Changes are autosaved with a short debounce.
+9. When the overlay is about to be discarded, pending drawing data is saved immediately.
+10. The canvas is released so large PDFs do not create a canvas for every page.
 
 If iPad testing shows that a specific PDFKit overlay API does not preserve PencilKit geometry correctly, keep the page-bound invariant and document the replacement design before implementing it.
 

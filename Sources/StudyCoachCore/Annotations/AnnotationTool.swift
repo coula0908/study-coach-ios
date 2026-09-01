@@ -31,7 +31,7 @@ struct AnnotationToolConfiguration {
     let color: UIColor
     let width: CGFloat
 
-    func apply(to canvas: PKCanvasView) {
+    func apply(to canvas: PencilPageCanvasView) {
         switch tool {
         case .pen:
             canvas.tool = PKInkingTool(.pen, color: color, width: width)
@@ -44,5 +44,6 @@ struct AnnotationToolConfiguration {
         case .eraser:
             canvas.tool = PKEraserTool(.vector)
         }
+        canvas.apply(self)
     }
 }

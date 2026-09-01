@@ -33,10 +33,10 @@ final class PDFViewerProxy: ObservableObject {
     }
 
     func undo() {
-        activeCanvas?.undoManager?.undo()
+        activeCanvas?.performUndo()
     }
 
     func redo() {
-        activeCanvas?.undoManager?.redo()
+        activeCanvas?.performRedo()
     }
 }
