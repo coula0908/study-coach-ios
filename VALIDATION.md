@@ -8,7 +8,7 @@
 - Swift Playgrounds package import: passed on physical iPadOS 26 with tag `0.1.0`
 - PDF display and navigation: passed on physical iPadOS 26; no stutter reported
 - PencilKit behavior: Apple Pencil writing passed on physical iPadOS 26 with `0.1.2`; the user reported that the app launched and handwriting worked correctly
-- PaperKit diagnostic: implemented independently from the production root; Apple CI and physical Swift Playgrounds testing pending
+- PaperKit diagnostic: implemented independently from the production root; Xcode 16.4 and Xcode 26.6 CI passed, while physical Swift Playgrounds testing remains pending
 
 Do not mark the MVP complete until the Pencil input fix and the remaining acceptance checks pass in Swift Playgrounds on the target iPad.
 
@@ -103,9 +103,9 @@ high-resolution rendering requirements.
 - Diagnostic entry point: `StudyCoachPaperKitDiagnosticView()`
 - PDFKit integration: intentionally not implemented in this spike
 - Windows validation: passed (`scripts/validate-repository.ps1` and `git diff --check`) on 2026-09-01
-- Xcode 16 fallback compilation: pending
-- Xcode 26 PaperKit compilation: pending
-- iPad Simulator construction smoke test: pending
+- Xcode 16 fallback compilation: passed with Xcode 16.4 (build 16F6), workflow run 12 on 2026-09-01
+- Xcode 26 PaperKit compilation: passed with Xcode 26.6 (build 17F113), workflow run 12 on 2026-09-01
+- iPad Simulator construction smoke test: passed; 5 tests on Xcode 16.4 and 6 tests on Xcode 26.6, 0 failures, including `testPaperKitRuntimeTypesCanBeConstructed`
 - Physical iPadOS 26 Swift Playgrounds import and interaction checklist: pending
 - Procedure: `docs/PAPERKIT_DIAGNOSTIC.md`
 
