@@ -7,6 +7,7 @@ $requiredPaths = @(
     'Sources\StudyCoachCore\App\StudyCoachRootView.swift'
     'Sources\StudyCoachCore\App\StudyCoachSessionModel.swift'
     'Sources\StudyCoachCore\App\StudyCoachWorkspaceView.swift'
+    'Sources\StudyCoachCore\Diagnostics\StudyCoachPaperKitDiagnosticView.swift'
     'Sources\StudyCoachCore\PDF\PDFKitContainerView.swift'
     'Sources\StudyCoachCore\PDF\PDFWorkspaceView.swift'
     'Sources\StudyCoachCore\Annotations\PencilPageCanvasView.swift'
@@ -14,6 +15,7 @@ $requiredPaths = @(
     'Sources\StudyCoachCore\Persistence\StudyCoachDocumentStore.swift'
     'Tests\StudyCoachCoreTests\StudyCoachCoreSmokeTests.swift'
     'THIRD_PARTY_NOTICES.md'
+    'docs\PAPERKIT_DIAGNOSTIC.md'
 )
 
 foreach ($relativePath in $requiredPaths) {
@@ -36,6 +38,9 @@ $pdfContainer = Get-Content -LiteralPath (
 $pencilRecognizer = Get-Content -LiteralPath (
     Join-Path $repositoryRoot 'Sources\StudyCoachCore\Annotations\PencilStrokeGestureRecognizer.swift'
 ) -Raw
+$paperKitDiagnostic = Get-Content -LiteralPath (
+    Join-Path $repositoryRoot 'Sources\StudyCoachCore\Diagnostics\StudyCoachPaperKitDiagnosticView.swift'
+) -Raw
 
 foreach ($requiredManifestText in @(
     '// swift-tools-version: 5.9'
@@ -55,6 +60,25 @@ foreach ($requiredRootViewText in @(
     if (-not $rootView.Contains($requiredRootViewText)) {
         throw "StudyCoachRootView is missing: $requiredRootViewText"
     }
+}
+
+foreach ($requiredDiagnosticText in @(
+    'public struct StudyCoachPaperKitDiagnosticView'
+    'public init()'
+    '#if canImport(PaperKit)'
+    'if #available(iOS 26.0, *)'
+    'PaperMarkupViewController('
+    'MarkupEditViewController('
+    'dataRepresentation()'
+    'PaperMarkup(dataRepresentation:'
+)) {
+    if (-not $paperKitDiagnostic.Contains($requiredDiagnosticText)) {
+        throw "PaperKit diagnostic is missing: $requiredDiagnosticText"
+    }
+}
+
+if ($rootView.Contains('StudyCoachPaperKitDiagnosticView')) {
+    throw 'StudyCoachRootView must not route production users into the PaperKit diagnostic.'
 }
 
 if ($pageCanvas.Contains('override func hitTest')) {

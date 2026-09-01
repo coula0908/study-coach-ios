@@ -3,11 +3,34 @@ import UIKit
 import XCTest
 @testable import StudyCoachCore
 
+#if canImport(PaperKit)
+import PaperKit
+#endif
+
 @MainActor
 final class StudyCoachCoreSmokeTests: XCTestCase {
     func testRootViewCanBeCreated() {
         _ = StudyCoachRootView()
     }
+
+    func testPaperKitDiagnosticViewCanBeCreatedWithoutChangingProductionRoot() {
+        _ = StudyCoachPaperKitDiagnosticView()
+        _ = StudyCoachRootView()
+    }
+
+#if canImport(PaperKit)
+    @available(iOS 26.0, *)
+    func testPaperKitRuntimeTypesCanBeConstructed() {
+        let markup = PaperMarkup(bounds: CGRect(x: 0, y: 0, width: 800, height: 1_000))
+        let controller = PaperMarkupViewController(
+            markup: markup,
+            supportedFeatureSet: .latest
+        )
+
+        XCTAssertNotNil(controller.markup)
+        XCTAssertEqual(controller.supportedFeatureSet, .latest)
+    }
+#endif
 
     func testAdoptedPencilPathCreatesPersistedStrokeAndSupportsUndoRedo() throws {
         let canvas = PencilPageCanvasView(frame: CGRect(x: 0, y: 0, width: 500, height: 700))

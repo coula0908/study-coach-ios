@@ -4,6 +4,13 @@
 
 This document fixes the design boundaries for the first PDF-annotation MVP. The viewer, page overlay, tool state, and persistence layers are implemented. Apple-toolchain compilation and interaction testing on the target iPadOS 26 device remain required.
 
+PaperKit evaluation is isolated behind the public
+`StudyCoachPaperKitDiagnosticView`. The diagnostic is not part of the
+production composition below, does not receive a PDF page, and stores only its
+own disposable `PaperMarkup` under a Diagnostics directory. Do not replace the
+production annotation engine or add PaperKit to PDF overlays until the
+standalone checklist in `PAPERKIT_DIAGNOSTIC.md` passes on the target iPad.
+
 ## Module boundary
 
 `StudyCoachCore` is a single Swift Package library product. The app playground owns only its app lifecycle and imports the library. The package owns the study UI, PDF workflow, annotations, and local persistence.
