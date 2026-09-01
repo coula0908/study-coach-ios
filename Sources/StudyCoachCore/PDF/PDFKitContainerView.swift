@@ -228,7 +228,8 @@ struct PDFKitContainerView: UIViewRepresentable {
             saveTasks[key]?.cancel()
             saveTasks[key] = Task { [weak self] in
                 try? await Task.sleep(nanoseconds: 450_000_000)
-                guard !Task.isCancelled else { return }
+                guard !Task.isCancelled,
+                      self?.drawingCache[key] == data else { return }
                 do {
                     try await store.saveDrawingData(
                         data,
@@ -252,6 +253,8 @@ struct PDFKitContainerView: UIViewRepresentable {
 
             saveTasks[key]?.cancel()
             saveTasks[key] = Task { [weak self] in
+                guard !Task.isCancelled,
+                      self?.drawingCache[key] == data else { return }
                 do {
                     try await store.saveDrawingData(
                         data,
