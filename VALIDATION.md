@@ -109,3 +109,14 @@ high-resolution rendering requirements.
 - Physical iPadOS 26 Swift Playgrounds import and interaction checklist: pending
 - Procedure: `docs/PAPERKIT_DIAGNOSTIC.md`
 
+### Physical Swift Playgrounds compatibility result: 0.1.3
+
+- Date: 2026-09-01
+- Device OS: iPadOS 26
+- Result: package compilation failed before launch
+- Exact error: `Cannot assign value of type 'PaperMarkupViewController' to type '(any MarkupEditViewController.Delegate)?'`
+- Difference from CI: Xcode 26.6 exposes this conformance, while the target
+  Swift Playgrounds toolchain did not expose it to the package compiler
+- Follow-up: replace the unconditional delegate assignment with a guarded
+  runtime compatibility cast so the core PaperKit drawing diagnostic can launch
+

@@ -81,6 +81,19 @@ if ($rootView.Contains('StudyCoachPaperKitDiagnosticView')) {
     throw 'StudyCoachRootView must not route production users into the PaperKit diagnostic.'
 }
 
+if ($paperKitDiagnostic.Contains('editor.delegate = paperController')) {
+    throw 'Swift Playgrounds does not always expose PaperMarkupViewController as MarkupEditViewController.Delegate; use the guarded compatibility cast.'
+}
+
+foreach ($requiredPaperKitCompatibilityText in @(
+    'as? any MarkupEditViewController.Delegate'
+    'editor.delegate = editDelegate'
+)) {
+    if (-not $paperKitDiagnostic.Contains($requiredPaperKitCompatibilityText)) {
+        throw "PaperKit Swift Playgrounds compatibility guard is missing: $requiredPaperKitCompatibilityText"
+    }
+}
+
 if ($pageCanvas.Contains('override func hitTest')) {
     throw 'PencilPageCanvasView must not route input by overriding hitTest; it can discard Pencil touches on a physical iPad.'
 }

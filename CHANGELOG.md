@@ -1,5 +1,13 @@
 # Changelog
 
+## Unreleased — Swift Playgrounds PaperKit compatibility
+
+- Avoid requiring compile-time exposure of `PaperMarkupViewController` as a
+  `MarkupEditViewController.Delegate`, which differs between Xcode 26.6 and the
+  iPad Swift Playgrounds toolchain.
+- Keep the PaperKit drawing, eraser, zoom, undo/redo, and persistence diagnostic
+  available when structured-element insertion delegation is unavailable.
+
 ## Unreleased — PaperKit diagnostic spike
 
 - Add a public, opt-in `StudyCoachPaperKitDiagnosticView` without changing
