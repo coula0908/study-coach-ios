@@ -4,7 +4,7 @@
 
 - Repository structure: passed `scripts/validate-repository.ps1` on 2026-09-01
 - Apple toolchain compilation: passed on GitHub Actions with Xcode 16.4 on 2026-09-01
-- iPad Simulator unit tests: 3 passed, 0 failed on 2026-09-01
+- iPad Simulator unit tests: 4 passed, 0 failed on 2026-09-01
 - Swift Playgrounds package import: passed on physical iPadOS 26 with tag `0.1.0`
 - PDF display and navigation: passed on physical iPadOS 26; no stutter reported
 - PencilKit behavior: pen, highlighter, and eraser failed on physical iPadOS 26 in both `0.1.0` and `0.1.1`; Pumice-derived Pencil-only recognizer implemented for `0.1.2` and awaiting retest
@@ -12,6 +12,19 @@
 Do not mark the MVP complete until the Pencil input fix and the remaining acceptance checks pass in Swift Playgrounds on the target iPad.
 
 ## Apple toolchain record
+
+### Pumice-derived Pencil input path
+
+- Date: 2026-09-01
+- GitHub commit: `6e1e0f05e5614ae855aeb938135ead9af2461b9d`
+- Workflow run: <https://github.com/coula0908/study-coach-ios/actions/runs/33482554143>
+- Toolchain: Xcode 16.4 (build 16F6), iOS Simulator SDK 18.5
+- Build result: `StudyCoachCore` and `StudyCoachCoreTests` compiled successfully for iOS Simulator
+- Test result: 4 tests executed, 0 failures
+- Added coverage: the Pumice-derived Pencil-only path creates a `PKStroke`, survives a `PKDrawing` data round trip, and supports undo and redo
+- Not covered by CI: physical Apple Pencil event delivery through PDFKit on iPadOS 26; this remains the required `0.1.2` device acceptance test
+
+### Earlier package baseline
 
 - Date: 2026-09-01
 - GitHub commit: `9497e1d594be1b16de2bb82919c5eeb8752f1d9c`
@@ -68,3 +81,4 @@ Do not mark the MVP complete until the Pencil input fix and the remaining accept
 - Relaunch restoration result:
 - Large-PDF observation:
 - Known issues:
+
