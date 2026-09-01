@@ -143,17 +143,17 @@ final class PencilPageCanvasView: PKCanvasView {
     }
 
     private func erase(from start: CGPoint, to end: CGPoint) {
-        let kept = drawing.strokes.filter { stroke in
-            !stroke(stroke, intersectsEraserFrom: start, to: end)
+        let kept = drawing.strokes.filter { candidate in
+            !intersectsEraser(candidate, from: start, to: end)
         }
         if kept.count != drawing.strokes.count {
             drawing = PKDrawing(strokes: kept)
         }
     }
 
-    private func stroke(
+    private func intersectsEraser(
         _ stroke: PKStroke,
-        intersectsEraserFrom start: CGPoint,
+        from start: CGPoint,
         to end: CGPoint
     ) -> Bool {
         guard stroke.path.count > 0 else { return false }
@@ -253,3 +253,4 @@ extension PencilPageCanvasView: PencilStrokeGestureDelegate {
         eraserLastPoint = nil
     }
 }
+
