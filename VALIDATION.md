@@ -39,7 +39,11 @@ remaining acceptance checks pass in Swift Playgrounds on the target iPad.
   diagnostics and production `.drawing` files remain unchanged
 - Windows repository validation: passed (`scripts/validate-repository.ps1` and
   `git diff --check` on 2026-09-03)
-- Xcode 16.4 fallback and Xcode 26 PaperKit compilation: pending
+- Apple validation commit: `61e5c4a6dca2513b34fd89d5d50d8e3ad653a937`
+- Workflow run: <https://github.com/coula0908/study-coach-ios/actions/runs/33696309896>
+- Xcode 16.4 fallback build and iPad Simulator tests: passed
+- Xcode 26 PaperKit build and iPad Simulator tests: passed, including creation
+  of a PDF fixture and execution of both full-page and visible-region rasterizers
 - Physical iPadOS 26 acceptance: pending
 
 ## Pencil-only and canvas-scaling A/B revision
