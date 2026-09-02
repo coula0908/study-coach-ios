@@ -81,19 +81,19 @@ Use a page-overlay provider supported by PDFKit rather than a global canvas. The
     PDFKit receives this canvas itself as the top-level page overlay; wrapping
     it in a generic view prevents every PencilKit tool from receiving input on
     the physical iPadOS 26 device.
-11. At rest, a noninteractive sibling `CATiledLayer` view in the same PDF page
-    container renders bounded regions from the
+11. At rest, a noninteractive `CATiledLayer` view inside the returned canvas
+    renders bounded regions from the
     same `PKDrawing` using `image(from:scale:)`. This lets Core Animation ask
     for magnified levels of detail without creating a full-page high-resolution
     bitmap or changing page coordinates.
-12. The resting live canvas layer remains minimally visible rather than fully
-    opaque so its softer cached ink does not visibly dominate the sharp sibling
-    rendering. Physical testing disproved opacity as the cause of the earlier
-    input failure; keeping the canvas itself as PDFKit's returned overlay is the
-    required input invariant.
+12. Do not add the renderer as a sibling in PDFKit's private page-container
+    hierarchy and do not change the canvas layer opacity. Both the wrapper and
+    sibling experiments prevented native tools on the physical device. The
+    canvas and its internal noninteractive renderer must remain the only
+    package-owned page-overlay subtree.
 13. Changes are autosaved with a short debounce.
 14. When the overlay is about to be discarded, pending drawing data is saved immediately.
-15. The presentation sibling and canvas are released so large PDFs do not create an editor
+15. The internal presentation and canvas are released so large PDFs do not create an editor
     or tiled ink renderer for every page.
 
 If iPad testing shows that a specific PDFKit overlay API does not preserve PencilKit geometry correctly, keep the page-bound invariant and document the replacement design before implementing it.

@@ -96,6 +96,22 @@ remaining acceptance checks pass in Swift Playgrounds on the target iPad.
   attach the already successful sharp renderer as a noninteractive sibling in
   the same PDF page container
 
+### Physical-device result: 0.1.11
+
+- Date: 2026-09-03
+- Confirmed source version: `0.1.11`
+- Pen input: failed
+- Highlighter input: failed
+- Eraser input: failed
+- Conclusion: returning `PKCanvasView` as the top-level overlay was not enough
+  while a separate sharp renderer remained in PDFKit's private page-container
+  hierarchy. The added sibling still changed the physical input behavior.
+- Follow-up: keep PDFKit's page hierarchy identical to the accepted `0.1.8`
+  path and attach the noninteractive sharp renderer only inside the returned
+  canvas. Do not dim the canvas or add another page-container sibling.
+- Version visibility follow-up: add root `VERSION.md`, starting with `0.1.12`,
+  so Swift Playgrounds can show the resolved source version directly
+
 ## Native PDFKit/PencilKit revision
 
 - Date: 2026-09-02

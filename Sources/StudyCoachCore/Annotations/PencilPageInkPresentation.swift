@@ -1,15 +1,15 @@
-import QuartzCore
 import UIKit
 
-/// Adds a noninteractive, zoom-aware ink display beside the native page
-/// canvas without wrapping it. PDFKit must receive `PKCanvasView` itself as the
-/// page overlay for reliable Pencil routing on the target iPadOS 26 device.
+/// Adds a noninteractive, zoom-aware ink display inside the native page canvas
+/// without wrapping it or adding a sibling to PDFKit's private page hierarchy.
+/// PDFKit still receives `PKCanvasView` itself as the complete page overlay.
 final class PencilPageInkPresentation {
     private weak var canvasView: PencilPageCanvasView?
-    private weak var hostView: UIView?
     private let drawingRenderView = PencilDrawingRenderView(frame: .zero)
-    private var renderConstraints: [NSLayoutConstraint] = []
-    private var renderTransition: DispatchWorkItem?
+
+    var isInstalledInsideCanvas: Bool {
+        drawingRenderView.superview === canvasView
+    }
 
     init(canvasView: PencilPageCanvasView) {
         self.canvasView = canvasView
@@ -23,38 +23,22 @@ final class PencilPageInkPresentation {
         }
     }
 
-    deinit {
-        renderTransition?.cancel()
-        detach()
-    }
-
-    func installAboveCanvas() {
-        guard let canvasView, let host = canvasView.superview else { return }
-        if drawingRenderView.superview === host {
-            host.bringSubviewToFront(drawingRenderView)
+    func installInsideCanvas() {
+        guard let canvasView else { return }
+        if drawingRenderView.superview === canvasView {
+            canvasView.bringSubviewToFront(drawingRenderView)
             return
         }
 
         detach()
-        hostView = host
-        drawingRenderView.translatesAutoresizingMaskIntoConstraints = false
-        host.addSubview(drawingRenderView)
-        renderConstraints = [
-            drawingRenderView.leadingAnchor.constraint(equalTo: canvasView.leadingAnchor),
-            drawingRenderView.trailingAnchor.constraint(equalTo: canvasView.trailingAnchor),
-            drawingRenderView.topAnchor.constraint(equalTo: canvasView.topAnchor),
-            drawingRenderView.bottomAnchor.constraint(equalTo: canvasView.bottomAnchor),
-        ]
-        NSLayoutConstraint.activate(renderConstraints)
-        host.bringSubviewToFront(drawingRenderView)
+        drawingRenderView.frame = canvasView.bounds
+        drawingRenderView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        canvasView.addSubview(drawingRenderView)
+        canvasView.bringSubviewToFront(drawingRenderView)
     }
 
     func detach() {
-        renderTransition?.cancel()
-        NSLayoutConstraint.deactivate(renderConstraints)
-        renderConstraints.removeAll()
         drawingRenderView.removeFromSuperview()
-        hostView = nil
     }
 
     func drawingDidChange() {
@@ -64,41 +48,20 @@ final class PencilPageInkPresentation {
 
     func showRenderedDrawing() {
         guard let canvasView else { return }
+        drawingRenderView.frame = canvasView.bounds
         drawingRenderView.display(canvasView.drawing)
         drawingRenderView.isHidden = false
-        scheduleCanvasDim()
+        canvasView.bringSubviewToFront(drawingRenderView)
     }
 
     private func beginUsingTool() {
-        renderTransition?.cancel()
         drawingRenderView.isHidden = true
-        setCanvasLayerFullyVisible(true)
     }
 
     private func endUsingTool() {
         guard let canvasView else { return }
         drawingRenderView.display(canvasView.drawing)
         drawingRenderView.isHidden = false
-        scheduleCanvasDim()
-    }
-
-    private func scheduleCanvasDim() {
-        renderTransition?.cancel()
-        let transition = DispatchWorkItem { [weak self] in
-            self?.setCanvasLayerFullyVisible(false)
-        }
-        renderTransition = transition
-
-        // Keep the native renderer visible briefly while the asynchronous
-        // tiled layer produces the newly changed visible tiles.
-        DispatchQueue.main.asyncAfter(deadline: .now() + 0.12, execute: transition)
-    }
-
-    private func setCanvasLayerFullyVisible(_ fullyVisible: Bool) {
-        guard let canvasView else { return }
-        CATransaction.begin()
-        CATransaction.setDisableActions(true)
-        canvasView.layer.opacity = fullyVisible ? 1 : 0.01
-        CATransaction.commit()
+        canvasView.bringSubviewToFront(drawingRenderView)
     }
 }

@@ -192,7 +192,7 @@ struct PDFKitContainerView: UIViewRepresentable {
             enablePageOverlayInteraction(canvas, in: pdfView)
             prioritizePencilKitInput(canvas, in: pdfView)
             parent.toolConfiguration.apply(to: canvas)
-            presentation?.installAboveCanvas()
+            presentation?.installInsideCanvas()
             presentation?.showRenderedDrawing()
             updateActiveCanvas()
 

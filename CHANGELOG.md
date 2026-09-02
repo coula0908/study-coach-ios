@@ -2,6 +2,12 @@
 
 ## Unreleased — Native PDFKit/PencilKit production editor
 
+- Move the noninteractive sharp renderer out of PDFKit's private page
+  hierarchy and inside the returned `PKCanvasView`. This preserves the exact
+  top-level overlay topology that accepted Pencil input in `0.1.8` while
+  retaining the zoom-aware display that sharpened restored ink in `0.1.9`.
+- Add `VERSION.md` so the exact source version resolved by Swift Playgrounds is
+  visible directly in the package navigator.
 - Restore the verified physical-device input topology by returning the native
   `PKCanvasView` itself from `PDFPageOverlayViewProvider`. Attach the sharp
   renderer as a noninteractive sibling in the same page container instead of

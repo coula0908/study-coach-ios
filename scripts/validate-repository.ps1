@@ -4,6 +4,7 @@ Set-StrictMode -Version Latest
 $repositoryRoot = Split-Path -Parent $PSScriptRoot
 $requiredPaths = @(
     'Package.swift'
+    'VERSION.md'
     'Sources\StudyCoachCore\App\StudyCoachRootView.swift'
     'Sources\StudyCoachCore\App\StudyCoachSessionModel.swift'
     'Sources\StudyCoachCore\App\StudyCoachWorkspaceView.swift'
@@ -29,6 +30,7 @@ foreach ($relativePath in $requiredPaths) {
 }
 
 $manifest = Get-Content -LiteralPath (Join-Path $repositoryRoot 'Package.swift') -Raw
+$versionDocument = Get-Content -LiteralPath (Join-Path $repositoryRoot 'VERSION.md') -Raw
 $rootView = Get-Content -LiteralPath (
     Join-Path $repositoryRoot 'Sources\StudyCoachCore\App\StudyCoachRootView.swift'
 ) -Raw
@@ -88,6 +90,10 @@ foreach ($requiredDiagnosticText in @(
 
 if ($rootView.Contains('StudyCoachPaperKitDiagnosticView')) {
     throw 'StudyCoachRootView must not route production users into the PaperKit diagnostic.'
+}
+
+if (-not $versionDocument.Contains('Current package version: `0.1.12`')) {
+    throw 'VERSION.md must identify the source tree as package version 0.1.12.'
 }
 
 if ($rootView.Contains('StudyCoachPaperKitPDFDiagnosticView')) {
@@ -163,15 +169,22 @@ foreach ($requiredRendererText in @(
     'PencilDrawingRenderView'
     'canvasView.onToolUseBegan'
     'canvasView.onToolUseEnded'
-    'canvasView.layer.opacity = fullyVisible ? 1 : 0.01'
+    'canvasView.addSubview(drawingRenderView)'
+    'canvasView.bringSubviewToFront(drawingRenderView)'
 )) {
     if (-not $inkPresentation.Contains($requiredRendererText)) {
         throw "PencilPageInkPresentation is missing high-resolution display wiring: $requiredRendererText"
     }
 }
 
-if ($inkPresentation -match '(?m)canvasView\.layer\.opacity\s*=\s*fullyVisible\s*\?\s*1\s*:\s*0\s*$') {
-    throw 'The resting PKCanvasView must remain active; zero layer opacity prevents Pencil tool input.'
+foreach ($forbiddenPresentationText in @(
+    'canvasView.superview'
+    'host.addSubview(drawingRenderView)'
+    'canvasView.layer.opacity ='
+)) {
+    if ($inkPresentation.Contains($forbiddenPresentationText)) {
+        throw "PencilPageInkPresentation must not modify PDFKit's page hierarchy or canvas opacity: $forbiddenPresentationText"
+    }
 }
 
 foreach ($requiredRendererText in @(
@@ -204,7 +217,7 @@ foreach ($requiredInteractionText in @(
     'UIPencilInteractionDelegate'
     'PencilPageCanvasView(frame: .zero)'
     'PencilPageInkPresentation(canvasView: canvas)'
-    'presentation?.installAboveCanvas()'
+    'presentation?.installInsideCanvas()'
     'presentation?.showRenderedDrawing()'
 )) {
     if (-not $pdfContainer.Contains($requiredInteractionText)) {
