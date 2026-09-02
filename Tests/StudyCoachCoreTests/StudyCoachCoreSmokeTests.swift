@@ -33,32 +33,33 @@ final class StudyCoachCoreSmokeTests: XCTestCase {
     }
 #endif
 
-    func testAdoptedPencilPathCreatesPersistedStrokeAndSupportsUndoRedo() throws {
+    func testNativePencilKitCanvasUsesPencilOnlyRecognizerInput() {
         let canvas = PencilPageCanvasView(frame: CGRect(x: 0, y: 0, width: 500, height: 700))
-        let pencilRecognizer = canvas.gestureRecognizers?
-            .compactMap { $0 as? PencilStrokeGestureRecognizer }
-            .first
-
-        XCTAssertFalse(canvas.drawingGestureRecognizer.isEnabled)
+        XCTAssertTrue(canvas.drawingGestureRecognizer.isEnabled)
+        XCTAssertEqual(canvas.drawingPolicy, .anyInput)
         XCTAssertEqual(
-            pencilRecognizer?.allowedTouchTypes,
+            canvas.drawingGestureRecognizer.allowedTouchTypes,
             [NSNumber(value: UITouch.TouchType.pencil.rawValue)]
         )
+    }
 
-        let path = UIBezierPath()
-        path.move(to: CGPoint(x: 30, y: 40))
-        path.addLine(to: CGPoint(x: 90, y: 110))
-        path.addLine(to: CGPoint(x: 150, y: 170))
-        canvas.pencilStrokeDidFinish(path: path)
+    func testNativeToolsExposeStrokeAndPartialErasers() {
+        let canvas = PencilPageCanvasView(frame: CGRect(x: 0, y: 0, width: 500, height: 700))
+        AnnotationToolConfiguration(
+            tool: .eraser,
+            color: .black,
+            width: 0.25,
+            eraserMode: .stroke
+        ).apply(to: canvas)
+        XCTAssertEqual((canvas.tool as? PKEraserTool)?.eraserType, .vector)
 
-        XCTAssertEqual(canvas.drawing.strokes.count, 1)
-        let restored = try PKDrawing(data: canvas.drawing.dataRepresentation())
-        XCTAssertEqual(restored.strokes.count, 1)
-
-        canvas.performUndo()
-        XCTAssertTrue(canvas.drawing.strokes.isEmpty)
-        canvas.performRedo()
-        XCTAssertEqual(canvas.drawing.strokes.count, 1)
+        AnnotationToolConfiguration(
+            tool: .eraser,
+            color: .black,
+            width: 0.25,
+            eraserMode: .partial
+        ).apply(to: canvas)
+        XCTAssertEqual((canvas.tool as? PKEraserTool)?.eraserType, .bitmap)
     }
 
     func testDrawingDataRoundTripsByDocumentAndPage() async throws {

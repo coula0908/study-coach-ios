@@ -10,6 +10,7 @@ struct PDFKitContainerView: UIViewRepresentable {
     let toolConfiguration: AnnotationToolConfiguration
     let store: StudyCoachDocumentStore
     @ObservedObject var proxy: PDFViewerProxy
+    let onPencilDoubleTap: () -> Void
 
     func makeCoordinator() -> Coordinator {
         Coordinator(parent: self)
@@ -72,6 +73,7 @@ struct PDFKitContainerView: UIViewRepresentable {
         private var canvases: [DrawingKey: WeakCanvas] = [:]
         private var drawingCache: [DrawingKey: Data] = [:]
         private var saveTasks: [DrawingKey: Task<Void, Never>] = [:]
+        private var pencilInteraction: UIPencilInteraction?
 
         init(parent: PDFKitContainerView) {
             self.parent = parent
@@ -79,6 +81,10 @@ struct PDFKitContainerView: UIViewRepresentable {
 
         func attach(to pdfView: PDFView) {
             self.pdfView = pdfView
+            let pencilInteraction = UIPencilInteraction()
+            pencilInteraction.delegate = self
+            pdfView.addInteraction(pencilInteraction)
+            self.pencilInteraction = pencilInteraction
             pageObserver = NotificationCenter.default.addObserver(
                 forName: .PDFViewPageChanged,
                 object: pdfView,
@@ -110,6 +116,10 @@ struct PDFKitContainerView: UIViewRepresentable {
             }
             pageObserver = nil
             backgroundObserver = nil
+            if let pencilInteraction, let pdfView {
+                pdfView.removeInteraction(pencilInteraction)
+            }
+            pencilInteraction = nil
             saveTasks.removeAll()
             canvases.removeAll()
             parent.proxy.activeCanvas = nil
@@ -167,8 +177,14 @@ struct PDFKitContainerView: UIViewRepresentable {
         func pdfView(_ pdfView: PDFView, willDisplayOverlayView overlayView: UIView, for page: PDFPage) {
             guard let canvas = overlayView as? PencilPageCanvasView else { return }
             enablePageOverlayInteraction(canvas, in: pdfView)
+            prioritizePencilKitInput(canvas, in: pdfView)
             parent.toolConfiguration.apply(to: canvas)
             updateActiveCanvas()
+
+            DispatchQueue.main.async { [weak canvas] in
+                guard let canvas, canvas.window != nil else { return }
+                canvas.becomeFirstResponder()
+            }
         }
 
         func pdfView(_ pdfView: PDFView, willEndDisplayingOverlayView overlayView: UIView, for page: PDFPage) {
@@ -241,6 +257,23 @@ struct PDFKitContainerView: UIViewRepresentable {
             }
         }
 
+        private func prioritizePencilKitInput(_ canvas: PencilPageCanvasView, in pdfView: PDFView) {
+            guard let scrollView = findScrollView(in: pdfView) else { return }
+            scrollView.panGestureRecognizer.require(toFail: canvas.drawingGestureRecognizer)
+        }
+
+        private func findScrollView(in view: UIView) -> UIScrollView? {
+            for subview in view.subviews {
+                if let scrollView = subview as? UIScrollView {
+                    return scrollView
+                }
+                if let nested = findScrollView(in: subview) {
+                    return nested
+                }
+            }
+            return nil
+        }
+
         private func scheduleSave(_ canvas: PencilPageCanvasView) {
             let key = DrawingKey(documentID: canvas.documentID, pageIndex: canvas.pageIndex)
             let data = canvas.drawing.dataRepresentation()
@@ -295,6 +328,12 @@ struct PDFKitContainerView: UIViewRepresentable {
         private func removeReleasedCanvases() {
             canvases = canvases.filter { $0.value.value != nil }
         }
+    }
+}
+
+extension PDFKitContainerView.Coordinator: UIPencilInteractionDelegate {
+    func pencilInteractionDidTap(_ interaction: UIPencilInteraction) {
+        parent.onPencilDoubleTap()
     }
 }
 

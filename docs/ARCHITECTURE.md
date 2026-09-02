@@ -5,12 +5,17 @@
 This document fixes the design boundaries for the first PDF-annotation MVP. The viewer, page overlay, tool state, and persistence layers are implemented. Apple-toolchain compilation and interaction testing on the target iPadOS 26 device remain required.
 
 The standalone `StudyCoachPaperKitDiagnosticView` passed on the target iPadOS
-26 device: the user accepted the writing feel and reported sharp ink at high
-zoom. PaperKit evaluation remains isolated from production. The second public
-diagnostic, `StudyCoachPaperKitPDFDiagnosticView`, renders a PDF page as tiled
-PaperKit content and stores one diagnostic `PaperMarkup` per document and page.
-Do not replace the production annotation engine until the PDF checklist in
-`PAPERKIT_PDF_DIAGNOSTIC.md` passes on the target iPad.
+26 device. The later PDF diagnostic exposed avoidable custom-renderer costs:
+PDF tiles became visible while pages loaded, the minimum ink width was too
+large, and maximum-zoom input did not preserve the accepted handwriting feel.
+PaperKit therefore remains an isolated comparison diagnostic, not the PDF
+renderer or production annotation engine.
+
+The production viewer follows Apple's WWDC22 design: one `PDFView` owns PDF
+layout, scrolling, zoom, crop-box transforms, and rotation, while
+`PDFPageOverlayViewProvider` supplies one native `PKCanvasView` per visible
+page. The small SwiftUI/provider plumbing is also cross-checked against the
+MIT-licensed `DannyBehar/PDFViewer` package. No source dependency is required.
 
 ## Module boundary
 
@@ -52,13 +57,15 @@ Use a page-overlay provider supported by PDFKit rather than a global canvas. The
 1. PDFKit asks for an overlay for a visible page.
 2. The package creates or reuses a lightweight page canvas.
 3. The package restores that page's `PKDrawing`.
-4. PencilKit's internal overlay drawing recognizer is disabled because it did
-   not activate reliably on the target iPadOS 26 device.
-5. A Pencil-only `UIGestureRecognizer`, adapted from the MIT-licensed Pumice
-   app's iPadOS 26-tested implementation, collects coalesced Pencil samples.
-   Finger touches are rejected and remain available to PDFKit.
-6. The recognizer converts completed strokes into `PKStroke` values, while
-   `PKCanvasView` remains responsible for rendering and `PKDrawing` storage.
+4. The canvas uses PencilKit's native enabled drawing recognizer. Its policy
+   matches Apple's `.anyInput` sample, while the recognizer's accepted touch
+   types are restricted to Apple Pencil so fingers remain available to PDFKit.
+5. In `willDisplayOverlayView`, PDFKit's pan gesture is required to wait for
+   the active canvas drawing gesture to fail. This is the failure relationship
+   hook Apple documents for interactive overlays.
+6. PencilKit owns raw Pencil sampling, prediction, pressure/tilt handling,
+   rendering, erasing, and undo registration. Production code must not build
+   ordinary handwritten `PKStroke` values from a `UIBezierPath`.
 7. When PDFKit displays an overlay, interaction is enabled on the canvas, its
    page-container ancestors, and the document view.
 8. Changes are autosaved with a short debounce.
@@ -90,7 +97,24 @@ Writes must be atomic. Metadata should include a schema version so stored drawin
 
 The toolbar owns the selected tool, color, and width. A newly created page canvas receives the current tool state. Undo and redo apply to the currently visible page canvas and must mark that page dirty for persistence.
 
-The first supported tools are pen, translucent highlighter, stroke eraser, undo, redo, width, and color.
+The first supported tools are pen, translucent highlighter, stroke eraser,
+partial eraser, undo, redo, width, and color. Apple Pencil double tap toggles
+between the most recently used inking tool and the eraser. The custom width
+control exposes values down to 0.25 page points and does not impose an
+additional highlighter minimum.
+
+## External references
+
+- Apple, ["What's new in PDFKit" (WWDC22)](https://developer.apple.com/videos/play/wwdc2022/10089/):
+  the authoritative `PDFPageOverlayViewProvider` plus `PKCanvasView` lifecycle.
+- [`DannyBehar/PDFViewer`](https://github.com/DannyBehar/PDFViewer) (MIT): a small SwiftUI wrapper confirming the same
+  provider boundary; referenced but not added as a package because its current
+  Swift toolchain requirement is newer than this package's 5.9 manifest.
+- [`theagitist/Pumice`](https://github.com/theagitist/Pumice) (MIT): retained as a fallback reference for iPadOS 26
+  Pencil routing and PDF Ink export, but its manual stroke path is no longer
+  used by the production editor.
+- [`TheProductArchitect/cecilias-notes`](https://github.com/TheProductArchitect/cecilias-notes) (MIT): retained as a reference for
+  advanced PencilKit tools and bounded lazy canvas mounting.
 
 ## Delivery stages
 

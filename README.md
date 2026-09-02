@@ -6,14 +6,22 @@ The first MVP focuses only on a stable PDF and Apple Pencil workflow. AI coachin
 
 ## Current stage
 
-The first PDF-and-Pencil MVP is implemented and passes Apple-toolchain compilation and unit tests. On physical iPadOS 26 hardware, package import, app launch, PDF display, navigation, and performance passed. Device testing showed that PencilKit's overlay drawing recognizer still failed in `0.1.1`; `0.1.2` adopts the Pencil-only recognizer path from the MIT-licensed, App-Store-shipped Pumice app and awaits physical-device retesting.
+The first PDF-and-Pencil MVP is implemented. The current development branch
+returns to Apple's native PDFKit/PencilKit overlay design, passes Xcode 16.4
+and Xcode 26.6 CI, and awaits physical iPadOS 26 verification. Earlier `0.1.2` device testing proved that
+a manual Pencil route can reach the overlay, while the PaperKit diagnostics
+proved good standalone ink quality but exposed unwanted PDF tile loading. The
+current implementation removes both custom paths from the production editor.
 
 - Swift Package manifest and public `StudyCoachRootView`
 - Files-app PDF importer
 - Continuous PDFKit viewer with page navigation, direct page jump, zoom controls, and finger pan/zoom
 - Page-bound, lazily created PencilKit canvases
 - Pen, translucent highlighter, vector eraser, undo, redo, color, and width controls
-- Pumice-derived Pencil-only gesture routing so Pencil reaches the page canvas while finger gestures remain available to PDFKit
+- Native PencilKit sampling and rendering, with its drawing recognizer limited
+  to Apple Pencil and prioritized ahead of PDFKit's pan gesture
+- Stroke and partial erasers, plus Apple Pencil double-tap pen/eraser switching
+- Fine ink widths from 0.25 points without a forced thick highlighter minimum
 - SHA-256 document identity
 - Atomic, per-page `PKDrawing` persistence outside the source PDF
 - Last document and last page restoration after relaunch
@@ -54,10 +62,10 @@ VALIDATION.md
 
 The package intentionally has no external dependencies.
 
-The Pencil-only recognizer is source-adapted from the MIT-licensed Pumice app;
-see [third-party notices](THIRD_PARTY_NOTICES.md). Keeping this small component
-in source form avoids an Xcode-only binary dependency and remains compatible
-with Swift Playgrounds.
+The production editor contains no copied third-party code or external package
+dependency. Its overlay lifecycle follows Apple's WWDC22 PDFKit example and is
+cross-checked against public MIT-licensed implementations; see
+[architecture](docs/ARCHITECTURE.md) and [third-party notices](THIRD_PARTY_NOTICES.md).
 
 ## Add the package in Swift Playgrounds
 
