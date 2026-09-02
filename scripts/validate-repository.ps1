@@ -92,8 +92,8 @@ if ($rootView.Contains('StudyCoachPaperKitDiagnosticView')) {
     throw 'StudyCoachRootView must not route production users into the PaperKit diagnostic.'
 }
 
-if (-not $versionDocument.Contains('Current package version: `0.1.12`')) {
-    throw 'VERSION.md must identify the source tree as package version 0.1.12.'
+if (-not $versionDocument.Contains('Current package version: `0.1.13`')) {
+    throw 'VERSION.md must identify the source tree as package version 0.1.13.'
 }
 
 if ($rootView.Contains('StudyCoachPaperKitPDFDiagnosticView')) {
@@ -104,7 +104,12 @@ foreach ($requiredPaperKitPDFText in @(
     'public struct StudyCoachPaperKitPDFDiagnosticView'
     'PaperMarkupViewController('
     'PaperKitPDFPageBackgroundView'
-    'CATiledLayer.self'
+    'PaperKitPDFPageRasterizer'
+    'baseImageView'
+    'detailImageView'
+    'contentVisibleFrame'
+    'logicalPageScale: CGFloat = 2'
+    'basePixelsPerPDFPoint: CGFloat = 4'
     'PaperMarkup(dataRepresentation:'
     'dataRepresentation()'
     'pageIndex: Int'
@@ -112,6 +117,10 @@ foreach ($requiredPaperKitPDFText in @(
     if (-not $paperKitPDFDiagnostic.Contains($requiredPaperKitPDFText)) {
         throw "PaperKit PDF diagnostic is missing: $requiredPaperKitPDFText"
     }
+}
+
+if ($paperKitPDFDiagnostic.Contains('CATiledLayer')) {
+    throw 'The adaptive PaperKit PDF diagnostic must not reveal asynchronous rectangular PDF tiles.'
 }
 
 if ($paperKitDiagnostic.Contains('editor.delegate = paperController')) {

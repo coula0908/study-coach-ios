@@ -1,5 +1,24 @@
 # Changelog
 
+## 0.1.13 — Adaptive PaperKit PDF diagnostic
+
+- Keep the accepted PaperKit writing, erasing, zoom, undo, persistence, and
+  system `PKToolPicker` path while removing `PDFView` from the PDF diagnostic.
+- Replace the visible `CATiledLayer` PDF background with a complete page image
+  that appears atomically, so pages no longer fill in as rectangular tiles.
+- Render the base page at four pixels per PDF point with bounded dimensions and
+  pixel count instead of allocating an unbounded maximum-zoom bitmap.
+- Observe PaperKit's visible content frame and, after pan or pinch settles,
+  rerender only that expanded visible region from the original PDF at 1.2 times
+  the device presentation density. The completed region replaces the prior
+  detail image atomically.
+- Double the PaperKit logical page coordinates to approximately match the
+  physically accepted `0.1.4` standalone canvas density.
+- Add thin pen and highlighter presets to the system tool picker while keeping
+  Apple's default tool items available.
+- Store the adaptive diagnostic PDF and `PaperMarkup` files separately from
+  the earlier tiled experiment, preserving all previous test data.
+
 ## Unreleased — Native PDFKit/PencilKit production editor
 
 - Move the noninteractive sharp renderer out of PDFKit's private page

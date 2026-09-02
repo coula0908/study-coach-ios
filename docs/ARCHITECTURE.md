@@ -5,11 +5,14 @@
 This document fixes the design boundaries for the first PDF-annotation MVP. The viewer, page overlay, tool state, and persistence layers are implemented. Apple-toolchain compilation and interaction testing on the target iPadOS 26 device remain required.
 
 The standalone `StudyCoachPaperKitDiagnosticView` passed on the target iPadOS
-26 device. The later PDF diagnostic exposed avoidable custom-renderer costs:
+26 device. The first PDF diagnostic exposed avoidable custom-renderer costs:
 PDF tiles became visible while pages loaded, the minimum ink width was too
 large, and maximum-zoom input did not preserve the accepted handwriting feel.
-PaperKit therefore remains an isolated comparison diagnostic, not the PDF
-renderer or production annotation engine.
+The `0.1.13` diagnostic keeps PaperKit as the sole interaction and markup owner,
+removes `PDFView`, doubles the logical page coordinates, displays a complete
+bounded PDF page image, and atomically replaces only the visible region after
+pan or pinch settles. It remains isolated until the physical iPad acceptance
+check passes; the existing production root stays recoverable and unchanged.
 
 The production viewer follows Apple's WWDC22 design: one `PDFView` owns PDF
 layout, scrolling, zoom, crop-box transforms, and rotation, while
@@ -97,6 +100,34 @@ Use a page-overlay provider supported by PDFKit rather than a global canvas. The
     or tiled ink renderer for every page.
 
 If iPad testing shows that a specific PDFKit overlay API does not preserve PencilKit geometry correctly, keep the page-bound invariant and document the replacement design before implementing it.
+
+## PaperKit-first candidate
+
+`StudyCoachPaperKitPDFDiagnosticView` is the candidate replacement path for the
+production editor. It deliberately uses no `PDFView`:
+
+1. `PaperMarkupViewController` owns scrolling, zoom, system tools, Pencil
+   sampling, rendering, erasing, undo, and markup persistence.
+2. `PDFDocument` and `PDFPage` are decoding and drawing helpers only.
+3. PaperKit's `contentView` is a page-sized image container below the markup.
+4. A complete four-pixels-per-PDF-point image appears atomically at page load,
+   subject to a 4096-pixel side and 14-million-pixel allocation bound.
+5. The visible content frame is sampled without modifying PaperKit's gesture
+   recognizers. Once it stays stable for 0.3 seconds, the visible region plus
+   overscan is rerendered from the original PDF at device presentation density
+   and swapped atomically.
+6. Any in-flight detail result is discarded after another pan or zoom change;
+   the complete base page remains visible throughout.
+7. The PaperKit coordinate space is twice the PDF crop-box dimensions. PDF
+   background transforms multiply PDF points by two; future PDF export divides
+   PaperKit points by two.
+8. Adaptive diagnostic storage is separate from both production `.drawing`
+   files and the first tiled PaperKit experiment.
+
+Do not promote this candidate into `StudyCoachRootView` until the target iPad
+confirms page orientation, alignment, system-tool behavior, writing feel,
+base-page appearance, post-zoom sharpening, page restoration, and memory
+stability on a representative study PDF.
 
 ## Document identity and storage
 

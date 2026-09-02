@@ -18,6 +18,30 @@
 Do not mark the MVP complete until the native Pencil input path and the
 remaining acceptance checks pass in Swift Playgrounds on the target iPad.
 
+## Adaptive PaperKit PDF candidate: 0.1.13
+
+- Date: 2026-09-03
+- Production entry point: unchanged `StudyCoachRootView()` at implementation
+  time; the adaptive candidate remains `StudyCoachPaperKitPDFDiagnosticView()`
+  until physical acceptance
+- Interaction owner: `PaperMarkupViewController`; `PDFView` is not constructed
+- Coordinate design: PaperKit bounds are two times the PDF crop-box dimensions
+- Base background: complete page rendered at four pixels per PDF point, capped
+  at a 4096-pixel side and 14 million pixels, then installed atomically
+- Detail background: after a 0.3-second stable viewport, the visible frame plus
+  18-percent overscan is rendered at 1.2 times device presentation density and
+  installed atomically
+- Tile behavior: no `CATiledLayer`; the complete base page remains visible
+  during pan, pinch, and detail rendering
+- System tools: native `PKToolPicker`, with thin pen and highlighter presets
+  prepended and all Apple default items retained
+- Persistence: new `PaperKitPDFAdaptive` diagnostic directory; prior PaperKit
+  diagnostics and production `.drawing` files remain unchanged
+- Windows repository validation: passed (`scripts/validate-repository.ps1` and
+  `git diff --check` on 2026-09-03)
+- Xcode 16.4 fallback and Xcode 26 PaperKit compilation: pending
+- Physical iPadOS 26 acceptance: pending
+
 ## Pencil-only and canvas-scaling A/B revision
 
 - Date: 2026-09-02

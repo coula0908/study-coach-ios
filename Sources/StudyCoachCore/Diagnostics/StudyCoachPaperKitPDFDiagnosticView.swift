@@ -5,13 +5,17 @@ import CryptoKit
 import PDFKit
 import PaperKit
 import PencilKit
-import QuartzCore
 import UIKit
 import UniformTypeIdentifiers
 #endif
 
 /// An isolated iPadOS 26 diagnostic that renders one PDF page as PaperKit
 /// content and persists one `PaperMarkup` per document and page.
+///
+/// PDFView is intentionally absent. PaperKit owns scrolling, zooming, tools,
+/// and Pencil input. A complete base image prevents tile-shaped page loading;
+/// after navigation settles, the visible region is rerendered atomically from
+/// the original PDF at the device's presentation resolution.
 ///
 /// The production `StudyCoachRootView` and its PencilKit overlays are not used
 /// or modified by this diagnostic.
@@ -162,8 +166,8 @@ private final class PaperKitPDFDiagnosticModel: ObservableObject {
 
 @available(iOS 26.0, *)
 private enum PaperKitPDFDiagnosticStorage {
-    static let lastDocumentKey = "StudyCoachCore.PaperKitPDFDiagnostic.lastDocumentID"
-    static let lastDocumentNameKey = "StudyCoachCore.PaperKitPDFDiagnostic.lastDocumentName"
+    static let lastDocumentKey = "StudyCoachCore.PaperKitPDFAdaptive.lastDocumentID"
+    static let lastDocumentNameKey = "StudyCoachCore.PaperKitPDFAdaptive.lastDocumentName"
 
     static var rootURL: URL {
         let support = FileManager.default.urls(
@@ -173,7 +177,7 @@ private enum PaperKitPDFDiagnosticStorage {
         return support
             .appendingPathComponent("StudyCoachCore", isDirectory: true)
             .appendingPathComponent("Diagnostics", isDirectory: true)
-            .appendingPathComponent("PaperKitPDF", isDirectory: true)
+            .appendingPathComponent("PaperKitPDFAdaptive", isDirectory: true)
     }
 
     static func documentDirectory(for documentID: String) -> URL {
@@ -187,7 +191,7 @@ private enum PaperKitPDFDiagnosticStorage {
     }
 
     static func lastPageKey(for documentID: String) -> String {
-        "StudyCoachCore.PaperKitPDFDiagnostic.lastPage.\(documentID)"
+        "StudyCoachCore.PaperKitPDFAdaptive.lastPage.\(documentID)"
     }
 }
 
@@ -354,12 +358,21 @@ private struct PaperKitPDFPageContainer: UIViewControllerRepresentable {
 @available(iOS 26.0, *)
 @MainActor
 private final class PaperKitPDFPageViewController: UIViewController {
+    /// Matching the coordinate density of the physically accepted 0.1.4
+    /// standalone canvas makes system tool widths useful on PDF-sized pages.
+    private static let logicalPageScale: CGFloat = 2
+    private static let viewportSettleDelay: TimeInterval = 0.3
+
     private let documentID: String
     private let pageIndex: Int
     private weak var proxy: PaperKitPDFDiagnosticProxy?
     private let paperController: PaperMarkupViewController
-    private let toolPicker = PKToolPicker()
+    private let backgroundView: PaperKitPDFPageBackgroundView
+    private let toolPicker: PKToolPicker
     private var backgroundObserver: NSObjectProtocol?
+    private var viewportTimer: Timer?
+    private var pendingViewportTask: Task<Void, Never>?
+    private var lastObservedVisibleFrame = CGRect.null
 
     init(
         page: PDFPage,
@@ -372,7 +385,13 @@ private final class PaperKitPDFPageViewController: UIViewController {
         self.proxy = proxy
 
         let pageBounds = page.bounds(for: .cropBox)
-        let markupBounds = CGRect(origin: .zero, size: pageBounds.size)
+        let markupBounds = CGRect(
+            origin: .zero,
+            size: CGSize(
+                width: pageBounds.width * Self.logicalPageScale,
+                height: pageBounds.height * Self.logicalPageScale
+            )
+        )
         let markupURL = PaperKitPDFDiagnosticStorage.markupURL(
             for: documentID,
             pageIndex: pageIndex
@@ -385,15 +404,34 @@ private final class PaperKitPDFPageViewController: UIViewController {
             markup = PaperMarkup(bounds: markupBounds)
         }
 
+        let configuredBackgroundView = PaperKitPDFPageBackgroundView(
+            page: page,
+            logicalScale: Self.logicalPageScale,
+            frame: markupBounds
+        )
         let configuredPaperController = PaperMarkupViewController(
             markup: markup,
             supportedFeatureSet: .latest
         )
-        configuredPaperController.contentView = PaperKitPDFPageBackgroundView(
-            page: page,
-            frame: markupBounds
-        )
+        configuredPaperController.contentView = configuredBackgroundView
+        backgroundView = configuredBackgroundView
         paperController = configuredPaperController
+
+        let thinPen = PKToolPickerInkingItem(
+            type: .pen,
+            color: .label,
+            width: 0.5,
+            identifier: "com.studycoach.paperkit.thin-pen"
+        )
+        let thinHighlighter = PKToolPickerInkingItem(
+            type: .marker,
+            color: .systemYellow,
+            width: 2,
+            identifier: "com.studycoach.paperkit.thin-highlighter"
+        )
+        toolPicker = PKToolPicker(
+            toolItems: [thinPen, thinHighlighter] + PKToolPicker().toolItems
+        )
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -410,9 +448,22 @@ private final class PaperKitPDFPageViewController: UIViewController {
         paperController.directTouchMode = .selection
         paperController.directTouchAutomaticallyDraws = false
         paperController.zoomRange = 0.25...8
+        toolPicker.showsDrawingPolicyControls = false
+        toolPicker.stateAutosaveName = "StudyCoachCore.PaperKitPDFAdaptive.Tools"
         toolPicker.addObserver(paperController)
         paperController.pencilKitResponderState.activeToolPicker = toolPicker
         paperController.pencilKitResponderState.toolPickerVisibility = .visible
+
+        backgroundView.onStatusChange = { [weak self] message, isError in
+            self?.proxy?.statusMessage = message
+            self?.proxy?.statusIsError = isError
+        }
+        backgroundView.onBaseImageReady = { [weak self] in
+            guard let self else { return }
+            self.lastObservedVisibleFrame = .null
+            self.sampleViewport()
+        }
+        backgroundView.prepareBaseImage()
 
         addChild(paperController)
         paperController.view.translatesAutoresizingMaskIntoConstraints = false
@@ -441,11 +492,17 @@ private final class PaperKitPDFPageViewController: UIViewController {
         paperController.pencilKitResponderState.activeToolPicker = toolPicker
         paperController.pencilKitResponderState.toolPickerVisibility = .visible
         paperController.becomeFirstResponder()
-        proxy?.statusMessage = "\(pageIndex + 1)페이지: 확대 후 필기 정렬과 페이지 이동 복원을 확인하세요."
-        proxy?.statusIsError = false
+        startViewportMonitoring()
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        stopViewportMonitoring()
     }
 
     deinit {
+        viewportTimer?.invalidate()
+        pendingViewportTask?.cancel()
         if let backgroundObserver {
             NotificationCenter.default.removeObserver(backgroundObserver)
         }
@@ -475,28 +532,116 @@ private final class PaperKitPDFPageViewController: UIViewController {
             }
         }
     }
+
+    private func startViewportMonitoring() {
+        guard viewportTimer == nil else { return }
+        sampleViewport()
+
+        let timer = Timer(timeInterval: 0.1, repeats: true) { [weak self] _ in
+            Task { @MainActor [weak self] in
+                self?.sampleViewport()
+            }
+        }
+        RunLoop.main.add(timer, forMode: .common)
+        viewportTimer = timer
+    }
+
+    private func stopViewportMonitoring() {
+        viewportTimer?.invalidate()
+        viewportTimer = nil
+        pendingViewportTask?.cancel()
+        pendingViewportTask = nil
+    }
+
+    private func sampleViewport() {
+        let visibleFrame = paperController.contentVisibleFrame.standardized
+            .intersection(backgroundView.bounds)
+        guard visibleFrame.isUsableViewport else { return }
+
+        guard !visibleFrame.isApproximatelyEqual(to: lastObservedVisibleFrame) else {
+            return
+        }
+
+        lastObservedVisibleFrame = visibleFrame
+        backgroundView.viewportWillChange()
+        pendingViewportTask?.cancel()
+
+        let expectedFrame = visibleFrame
+        pendingViewportTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(
+                nanoseconds: UInt64(Self.viewportSettleDelay * 1_000_000_000)
+            )
+            guard !Task.isCancelled, let self else { return }
+            let currentFrame = self.paperController.contentVisibleFrame.standardized
+                .intersection(self.backgroundView.bounds)
+            guard currentFrame.isUsableViewport,
+                  currentFrame.isApproximatelyEqual(to: expectedFrame) else { return }
+
+            self.backgroundView.prepareDetailImage(
+                for: currentFrame,
+                viewportSize: self.paperController.view.bounds.size
+            )
+        }
+    }
 }
 
 @available(iOS 26.0, *)
 private final class PaperKitPDFPageBackgroundView: UIView {
-    private let page: PDFPage
+    private static let renderQueue = DispatchQueue(
+        label: "com.studycoach.paperkit.pdf-rendering",
+        qos: .userInitiated
+    )
+    private static let basePixelsPerPDFPoint: CGFloat = 4
+    private static let detailOverscanRatio: CGFloat = 0.18
+    private static let detailSupersampling: CGFloat = 1.2
+    private static let maximumPixelDimension: CGFloat = 4_096
+    private static let maximumPixelCount: CGFloat = 14_000_000
 
-    override class var layerClass: AnyClass {
-        CATiledLayer.self
-    }
+    var onStatusChange: ((String, Bool) -> Void)?
+    var onBaseImageReady: (() -> Void)?
 
-    init(page: PDFPage, frame: CGRect) {
-        self.page = page
+    private let logicalScale: CGFloat
+    private let rasterizer: PaperKitPDFPageRasterizer
+    private let baseImageView = UIImageView()
+    private let detailImageView = UIImageView()
+    private let activityIndicator = UIActivityIndicatorView(style: .medium)
+    private var detailRenderGeneration = 0
+    private var baseRenderStarted = false
+    private var baseImageIsReady = false
+
+    init(page: PDFPage, logicalScale: CGFloat, frame: CGRect) {
+        self.logicalScale = logicalScale
+        rasterizer = PaperKitPDFPageRasterizer(
+            pageData: page.dataRepresentation ?? Data(),
+            pageBounds: page.bounds(for: .cropBox),
+            logicalScale: logicalScale
+        )
         super.init(frame: frame)
         backgroundColor = .white
         isOpaque = true
-        contentScaleFactor = UIScreen.main.scale
 
-        if let tiledLayer = layer as? CATiledLayer {
-            tiledLayer.tileSize = CGSize(width: 512, height: 512)
-            tiledLayer.levelsOfDetail = 4
-            tiledLayer.levelsOfDetailBias = 4
-        }
+        baseImageView.frame = bounds
+        baseImageView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        baseImageView.backgroundColor = .white
+        baseImageView.contentMode = .scaleToFill
+        baseImageView.isOpaque = true
+        addSubview(baseImageView)
+
+        detailImageView.backgroundColor = .clear
+        detailImageView.contentMode = .scaleToFill
+        detailImageView.isHidden = true
+        detailImageView.isUserInteractionEnabled = false
+        addSubview(detailImageView)
+
+        activityIndicator.center = CGPoint(x: bounds.midX, y: bounds.midY)
+        activityIndicator.autoresizingMask = [
+            .flexibleLeftMargin,
+            .flexibleRightMargin,
+            .flexibleTopMargin,
+            .flexibleBottomMargin,
+        ]
+        activityIndicator.hidesWhenStopped = true
+        addSubview(activityIndicator)
     }
 
     @available(*, unavailable)
@@ -504,18 +649,198 @@ private final class PaperKitPDFPageBackgroundView: UIView {
         fatalError("init(coder:) is not used")
     }
 
-    override func draw(_ rect: CGRect) {
-        guard let context = UIGraphicsGetCurrentContext() else { return }
-        context.setFillColor(UIColor.white.cgColor)
-        context.fill(rect)
+    func prepareBaseImage() {
+        guard !baseRenderStarted else { return }
+        baseRenderStarted = true
+        activityIndicator.startAnimating()
+        onStatusChange?("PDF 전체 페이지를 준비하는 중…", false)
 
-        let pageBounds = page.bounds(for: .cropBox)
-        context.saveGState()
-        context.translateBy(x: 0, y: bounds.height)
-        context.scaleBy(x: 1, y: -1)
-        context.translateBy(x: -pageBounds.minX, y: -pageBounds.minY)
-        page.draw(with: .cropBox, to: context)
-        context.restoreGState()
+        let rasterizer = rasterizer
+        let pixelsPerLogicalPoint = Self.basePixelsPerPDFPoint / logicalScale
+        Self.renderQueue.async { [weak self] in
+            let image = rasterizer.render(
+                logicalRect: rasterizer.logicalBounds,
+                pixelsPerLogicalPoint: pixelsPerLogicalPoint,
+                maximumPixelDimension: Self.maximumPixelDimension,
+                maximumPixelCount: Self.maximumPixelCount
+            )
+            DispatchQueue.main.async {
+                guard let self else { return }
+                self.activityIndicator.stopAnimating()
+                guard let image else {
+                    self.onStatusChange?("PDF 페이지 이미지를 만들 수 없습니다.", true)
+                    return
+                }
+
+                self.baseImageView.image = image
+                self.baseImageIsReady = true
+                self.onStatusChange?(
+                    "전체 페이지 준비 완료 · 확대를 멈추면 보이는 영역이 다시 선명해집니다.",
+                    false
+                )
+                self.onBaseImageReady?()
+            }
+        }
+    }
+
+    func viewportWillChange() {
+        detailRenderGeneration += 1
+        detailImageView.isHidden = true
+        detailImageView.image = nil
+    }
+
+    func prepareDetailImage(for visibleFrame: CGRect, viewportSize: CGSize) {
+        guard baseImageIsReady,
+              visibleFrame.isUsableViewport,
+              viewportSize.width > 0,
+              viewportSize.height > 0 else { return }
+
+        let horizontalPresentationScale = viewportSize.width / visibleFrame.width
+        let verticalPresentationScale = viewportSize.height / visibleFrame.height
+        let presentationScale = max(horizontalPresentationScale, verticalPresentationScale)
+        let desiredPixelsPerLogicalPoint = presentationScale
+            * UIScreen.main.scale
+            * Self.detailSupersampling
+        let basePixelsPerLogicalPoint = Self.basePixelsPerPDFPoint / logicalScale
+
+        guard desiredPixelsPerLogicalPoint > basePixelsPerLogicalPoint * 1.1 else {
+            onStatusChange?("기본 페이지 해상도로 선명하게 표시 중", false)
+            return
+        }
+
+        let horizontalOverscan = visibleFrame.width * Self.detailOverscanRatio
+        let verticalOverscan = visibleFrame.height * Self.detailOverscanRatio
+        let detailRect = visibleFrame
+            .insetBy(dx: -horizontalOverscan, dy: -verticalOverscan)
+            .intersection(bounds)
+        guard detailRect.isUsableViewport else { return }
+
+        onStatusChange?("확대 영역을 원본 PDF에서 선명하게 만드는 중…", false)
+        let generation = nextDetailRenderGeneration()
+        let rasterizer = rasterizer
+        Self.renderQueue.async { [weak self] in
+            let image = rasterizer.render(
+                logicalRect: detailRect,
+                pixelsPerLogicalPoint: desiredPixelsPerLogicalPoint,
+                maximumPixelDimension: Self.maximumPixelDimension,
+                maximumPixelCount: Self.maximumPixelCount
+            )
+            DispatchQueue.main.async {
+                guard let self, generation == self.detailRenderGeneration else { return }
+                guard let image else {
+                    self.onStatusChange?("확대 영역 렌더링에 실패했습니다. 기본 페이지를 유지합니다.", true)
+                    return
+                }
+
+                UIView.performWithoutAnimation {
+                    self.detailImageView.frame = detailRect
+                    self.detailImageView.image = image
+                    self.detailImageView.isHidden = false
+                }
+                self.onStatusChange?("확대 영역 고해상도 표시 완료", false)
+            }
+        }
+    }
+
+    private func nextDetailRenderGeneration() -> Int {
+        detailRenderGeneration += 1
+        return detailRenderGeneration
+    }
+}
+
+@available(iOS 26.0, *)
+private final class PaperKitPDFPageRasterizer: @unchecked Sendable {
+    let logicalBounds: CGRect
+
+    private let pageData: Data
+    private let pageBounds: CGRect
+    private let logicalScale: CGFloat
+
+    init(pageData: Data, pageBounds: CGRect, logicalScale: CGFloat) {
+        self.pageData = pageData
+        self.pageBounds = pageBounds
+        self.logicalScale = logicalScale
+        logicalBounds = CGRect(
+            origin: .zero,
+            size: CGSize(
+                width: pageBounds.width * logicalScale,
+                height: pageBounds.height * logicalScale
+            )
+        )
+    }
+
+    func render(
+        logicalRect requestedRect: CGRect,
+        pixelsPerLogicalPoint requestedPixelsPerLogicalPoint: CGFloat,
+        maximumPixelDimension: CGFloat,
+        maximumPixelCount: CGFloat
+    ) -> UIImage? {
+        let logicalRect = requestedRect.standardized.intersection(logicalBounds)
+        guard logicalRect.isUsableViewport,
+              requestedPixelsPerLogicalPoint.isFinite,
+              requestedPixelsPerLogicalPoint > 0,
+              let document = PDFDocument(data: pageData),
+              let page = document.page(at: 0) else { return nil }
+
+        let rawPixelSize = CGSize(
+            width: logicalRect.width * requestedPixelsPerLogicalPoint,
+            height: logicalRect.height * requestedPixelsPerLogicalPoint
+        )
+        let dimensionLimitScale = min(
+            1,
+            maximumPixelDimension / max(rawPixelSize.width, rawPixelSize.height)
+        )
+        let rawPixelCount = rawPixelSize.width * rawPixelSize.height
+        let pixelCountLimitScale = min(
+            1,
+            sqrt(maximumPixelCount / max(rawPixelCount, 1))
+        )
+        let limitScale = min(dimensionLimitScale, pixelCountLimitScale)
+        let pixelSize = CGSize(
+            width: max(1, floor(rawPixelSize.width * limitScale)),
+            height: max(1, floor(rawPixelSize.height * limitScale))
+        )
+        let horizontalScale = pixelSize.width / logicalRect.width
+        let verticalScale = pixelSize.height / logicalRect.height
+
+        let format = UIGraphicsImageRendererFormat.preferred()
+        format.scale = 1
+        format.opaque = true
+        let renderer = UIGraphicsImageRenderer(size: pixelSize, format: format)
+        return autoreleasepool {
+            renderer.image { rendererContext in
+                let context = rendererContext.cgContext
+                context.setFillColor(UIColor.white.cgColor)
+                context.fill(CGRect(origin: .zero, size: pixelSize))
+                context.interpolationQuality = .high
+                context.saveGState()
+
+                // First map the requested logical PaperKit region to this
+                // bitmap, then use the same top-left to PDF-space conversion
+                // as the physically verified page diagnostic.
+                context.scaleBy(x: horizontalScale, y: verticalScale)
+                context.translateBy(x: -logicalRect.minX, y: -logicalRect.minY)
+                context.translateBy(x: 0, y: logicalBounds.height)
+                context.scaleBy(x: logicalScale, y: -logicalScale)
+                context.translateBy(x: -pageBounds.minX, y: -pageBounds.minY)
+                page.draw(with: .cropBox, to: context)
+                context.restoreGState()
+            }
+        }
+    }
+}
+
+private extension CGRect {
+    var isUsableViewport: Bool {
+        !isNull && !isInfinite && width.isFinite && height.isFinite && width > 1 && height > 1
+    }
+
+    func isApproximatelyEqual(to other: CGRect, tolerance: CGFloat = 0.75) -> Bool {
+        guard isUsableViewport, other.isUsableViewport else { return false }
+        return abs(minX - other.minX) <= tolerance
+            && abs(minY - other.minY) <= tolerance
+            && abs(width - other.width) <= tolerance
+            && abs(height - other.height) <= tolerance
     }
 }
 #endif
