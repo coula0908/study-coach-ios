@@ -10,9 +10,10 @@
 - PencilKit behavior: Apple Pencil writing passed on physical iPadOS 26 with `0.1.2`; the user reported that the app launched and handwriting worked correctly
 - PaperKit standalone diagnostic: Xcode 16.4 and Xcode 26.6 CI passed; physical iPadOS 26 launch, writing feel, and high-zoom ink quality passed with `0.1.4`
 - Native PDFKit/PencilKit revision: Xcode 16.4 and Xcode 26.6 builds and iPad
-  Simulator tests passed on 2026-09-02; physical iPadOS 26 input/high-zoom
-  verification found and diagnosed a first-stroke stack-overflow crash; the
-  delegate fix now requires a physical-device retest
+  Simulator tests passed on 2026-09-02; the `0.1.7` physical iPadOS 26 retest
+  confirmed the delegate crash is fixed and Apple Pencil writing works, but
+  also found that fingers produce ink and PencilKit ink appears pixelated at
+  high PDF zoom
 
 Do not mark the MVP complete until the native Pencil input path and the
 remaining acceptance checks pass in Swift Playgrounds on the target iPad.
@@ -37,6 +38,20 @@ remaining acceptance checks pass in Swift Playgrounds on the target iPad.
 - Xcode 26.6 / iOS 26.5 Simulator: build passed; 7 tests, 0 failures
 - Physical iPadOS 26 acceptance: pending
 
+### Physical-device pass: 0.1.7
+
+- Date: 2026-09-02
+- Device OS: iPadOS 26
+- Package launch and PDF import: passed
+- First Apple Pencil stroke: passed; the recursive delegate crash did not recur
+- Apple Pencil writing: passed
+- Finger/Pencil separation: failed; finger touches produced ink
+- High-zoom ink quality: failed; ink looked pixelated instead of being
+  rerendered with the earlier vector-like appearance
+- Follow-up: use the supported `.pencilOnly` policy without overriding the
+  native recognizer's touch types, and remove the canvas's forced one-times
+  zoom and disabled-scroll configuration for a physical A/B retest
+
 ### Physical-device crash diagnosis
 
 - Date: 2026-09-02
@@ -59,10 +74,11 @@ remaining acceptance checks pass in Swift Playgrounds on the target iPad.
 - Xcode 26.6 / iOS 26.5 Simulator: build and tests passed
 - Physical retest: pending
 
-The device test must specifically check that this `.anyInput` plus explicit
-Pencil-touch and gesture-priority combination fixes the `0.1.1` input failure.
-It must also check maximum-zoom ink sharpness because public reports indicate
-that a naively transformed `PKCanvasView` overlay can still rasterize softly.
+The next device test must check the corrected `.pencilOnly` policy with the
+existing overlay interaction and gesture-priority setup. It must also check
+maximum-zoom ink sharpness after removing the page canvas's forced one-times
+zoom state because public reports indicate that a naively transformed
+`PKCanvasView` overlay can still rasterize softly.
 
 ## Apple toolchain record
 

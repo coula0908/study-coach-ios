@@ -20,15 +20,6 @@ final class PencilPageCanvasView: PKCanvasView {
         configureCanvas()
     }
 
-    override func layoutSubviews() {
-        super.layoutSubviews()
-        contentInset = .zero
-        contentSize = bounds.size
-        minimumZoomScale = 1
-        maximumZoomScale = 1
-        zoomScale = 1
-    }
-
     func performUndo() {
         undoManager?.undo()
     }
@@ -43,16 +34,12 @@ final class PencilPageCanvasView: PKCanvasView {
         drawingDelegate.canvas = self
         delegate = drawingDelegate
 
-        // Apple's PDFKit overlay example uses `.anyInput`. Restricting the
-        // native recognizer itself to Pencil touches preserves that tested
-        // PencilKit path while leaving finger pan and pinch to PDFKit.
-        drawingPolicy = .anyInput
-        drawingGestureRecognizer.allowedTouchTypes = [
-            NSNumber(value: UITouch.TouchType.pencil.rawValue),
-        ]
+        // PencilKit owns input classification. Apple specifically recommends
+        // setting the drawing policy instead of mutating the native drawing
+        // recognizer's allowed touch types.
+        drawingPolicy = .pencilOnly
         drawingGestureRecognizer.isEnabled = true
         isUserInteractionEnabled = true
-        isScrollEnabled = false
         bounces = false
         alwaysBounceHorizontal = false
         alwaysBounceVertical = false

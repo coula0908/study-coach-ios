@@ -57,9 +57,9 @@ Use a page-overlay provider supported by PDFKit rather than a global canvas. The
 1. PDFKit asks for an overlay for a visible page.
 2. The package creates or reuses a lightweight page canvas.
 3. The package restores that page's `PKDrawing`.
-4. The canvas uses PencilKit's native enabled drawing recognizer. Its policy
-   matches Apple's `.anyInput` sample, while the recognizer's accepted touch
-   types are restricted to Apple Pencil so fingers remain available to PDFKit.
+4. The canvas uses PencilKit's native enabled drawing recognizer with the
+   supported `.pencilOnly` drawing policy. Production code must not mutate the
+   recognizer's `allowedTouchTypes`; fingers remain available for navigation.
 5. In `willDisplayOverlayView`, PDFKit's pan gesture is required to wait for
    the active canvas drawing gesture to fail. This is the failure relationship
    hook Apple documents for interactive overlays.
@@ -72,9 +72,12 @@ Use a page-overlay provider supported by PDFKit rather than a global canvas. The
    Pencil stroke begins and overflows the main-thread stack.
 8. When PDFKit displays an overlay, interaction is enabled on the canvas, its
    page-container ancestors, and the document view.
-9. Changes are autosaved with a short debounce.
-10. When the overlay is about to be discarded, pending drawing data is saved immediately.
-11. The canvas is released so large PDFs do not create a canvas for every page.
+9. Do not pin the page canvas's internal scroll and zoom state to one on every
+   layout pass. PDFKit may resize or transform the page overlay while zooming,
+   and PencilKit must remain able to update its native rendering state.
+10. Changes are autosaved with a short debounce.
+11. When the overlay is about to be discarded, pending drawing data is saved immediately.
+12. The canvas is released so large PDFs do not create a canvas for every page.
 
 If iPad testing shows that a specific PDFKit overlay API does not preserve PencilKit geometry correctly, keep the page-bound invariant and document the replacement design before implementing it.
 

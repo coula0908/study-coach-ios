@@ -126,15 +126,27 @@ if ($pageCanvas.Contains('delegate = self')) {
 }
 
 foreach ($requiredCanvasText in @(
-    'drawingPolicy = .anyInput'
+    'drawingPolicy = .pencilOnly'
     'drawingGestureRecognizer.isEnabled = true'
-    'drawingGestureRecognizer.allowedTouchTypes'
     'PencilPageCanvasDelegate'
     'PKCanvasViewDelegate'
     'canvasViewDrawingDidChange'
 )) {
     if (-not $pageCanvas.Contains($requiredCanvasText)) {
         throw "PencilPageCanvasView is missing native PencilKit routing: $requiredCanvasText"
+    }
+}
+
+foreach ($forbiddenCanvasText in @(
+    'drawingPolicy = .anyInput'
+    'drawingGestureRecognizer.allowedTouchTypes'
+    'isScrollEnabled = false'
+    'minimumZoomScale = 1'
+    'maximumZoomScale = 1'
+    'zoomScale = 1'
+)) {
+    if ($pageCanvas.Contains($forbiddenCanvasText)) {
+        throw "PencilPageCanvasView contains unsupported input or fixed-scale configuration: $forbiddenCanvasText"
     }
 }
 

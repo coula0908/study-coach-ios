@@ -2,6 +2,12 @@
 
 ## Unreleased — Native PDFKit/PencilKit production editor
 
+- Use PencilKit's supported `.pencilOnly` drawing policy so a finger navigates
+  the PDF instead of producing ink, and stop mutating the native drawing
+  recognizer's `allowedTouchTypes`.
+- Remove the page canvas's forced one-times zoom and disabled-scroll settings,
+  which could leave PencilKit's rendered surface magnified by PDFKit without a
+  corresponding native rendering update at high zoom.
 - Fix a physical iPadOS 26 stack-overflow crash at the beginning of the first
   Pencil stroke by moving `PKCanvasViewDelegate` callbacks to a separate,
   retained observer instead of making the `PKCanvasView` subclass its own
