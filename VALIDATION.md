@@ -18,6 +18,21 @@
 Do not mark the MVP complete until the native Pencil input path and the
 remaining acceptance checks pass in Swift Playgrounds on the target iPad.
 
+## Pencil-only and canvas-scaling A/B revision
+
+- Date: 2026-09-02
+- GitHub commit: `88296723dc8064374ca607c09f6aacaff0eee12b`
+- Workflow run: <https://github.com/coula0908/study-coach-ios/actions/runs/33643581703>
+- Xcode 16.4 runner (`macos-15`): build and iPad Simulator tests passed
+- Xcode 26 runner (`macos-26`): build and iPad Simulator tests passed
+- Windows repository validation: passed
+- Input change: `.pencilOnly` is now the sole PencilKit input classifier; the
+  native drawing recognizer's `allowedTouchTypes` is no longer mutated
+- Rendering A/B change: the page canvas is no longer forced back to one-times
+  zoom with scrolling disabled during layout
+- Physical iPadOS 26 acceptance: pending; verify finger navigation, Pencil
+  writing, high-zoom ink sharpness, and PDF/ink coordinate alignment together
+
 ## Native PDFKit/PencilKit revision
 
 - Date: 2026-09-02
