@@ -48,6 +48,23 @@ remaining acceptance checks pass in Swift Playgrounds on the target iPad.
 - Next experiment: keep the canvas as the authoritative editor, but display
   the resting `PKDrawing` through bounded, zoom-aware `CATiledLayer` tiles
 
+### Zoom-aware ink display revision
+
+- Date: 2026-09-03
+- GitHub commit: `9494e54b030ff2e86e51d4ef207ff8a9c04f0711`
+- Workflow run: <https://github.com/coula0908/study-coach-ios/actions/runs/33645826515>
+- Xcode 16.4 runner (`macos-15`): build and iPad Simulator tests passed
+- Xcode 26 runner (`macos-26`): build and iPad Simulator tests passed
+- Windows repository validation: passed
+- Rendering design: native PencilKit remains visible while a tool is active;
+  at rest, bounded `CATiledLayer` regions are generated from the same
+  `PKDrawing` using `image(from:scale:)` with magnified levels of detail
+- Full-page high-resolution bitmap allocation: not used
+- Existing drawing persistence migration: not required
+- Physical iPadOS 26 acceptance: pending; inspect high-zoom pen and highlighter
+  sharpness, the live-to-resting transition, tile seams or flashing, finger
+  navigation, coordinate alignment, erasers, undo, and restored drawings
+
 ## Native PDFKit/PencilKit revision
 
 - Date: 2026-09-02
