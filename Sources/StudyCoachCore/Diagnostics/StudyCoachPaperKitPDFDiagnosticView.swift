@@ -749,7 +749,7 @@ private final class PaperKitPDFPageBackgroundView: UIView {
 }
 
 @available(iOS 26.0, *)
-private final class PaperKitPDFPageRasterizer: @unchecked Sendable {
+final class PaperKitPDFPageRasterizer: @unchecked Sendable {
     let logicalBounds: CGRect
 
     private let pageData: Data

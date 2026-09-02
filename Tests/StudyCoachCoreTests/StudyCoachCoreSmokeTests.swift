@@ -1,3 +1,4 @@
+import PDFKit
 import PencilKit
 import UIKit
 import XCTest
@@ -30,6 +31,50 @@ final class StudyCoachCoreSmokeTests: XCTestCase {
 
         XCTAssertNotNil(controller.markup)
         XCTAssertEqual(controller.supportedFeatureSet, .latest)
+    }
+
+    @available(iOS 26.0, *)
+    func testAdaptivePaperKitPDFRasterizerRendersFullPageAndVisibleRegion() throws {
+        let sourceBounds = CGRect(x: 0, y: 0, width: 100, height: 200)
+        let pdfData = UIGraphicsPDFRenderer(bounds: sourceBounds).pdfData { context in
+            context.beginPage()
+            UIColor.white.setFill()
+            context.fill(sourceBounds)
+            UIColor.systemBlue.setFill()
+            context.fill(CGRect(x: 10, y: 10, width: 30, height: 30))
+        }
+        let document = try XCTUnwrap(PDFDocument(data: pdfData))
+        let page = try XCTUnwrap(document.page(at: 0))
+        let rasterizer = PaperKitPDFPageRasterizer(
+            pageData: try XCTUnwrap(page.dataRepresentation),
+            pageBounds: page.bounds(for: .cropBox),
+            logicalScale: 2
+        )
+
+        XCTAssertEqual(rasterizer.logicalBounds.width, 200, accuracy: 0.01)
+        XCTAssertEqual(rasterizer.logicalBounds.height, 400, accuracy: 0.01)
+
+        let baseImage = try XCTUnwrap(
+            rasterizer.render(
+                logicalRect: rasterizer.logicalBounds,
+                pixelsPerLogicalPoint: 2,
+                maximumPixelDimension: 4_096,
+                maximumPixelCount: 14_000_000
+            )
+        )
+        XCTAssertEqual(baseImage.size.width, 400, accuracy: 0.01)
+        XCTAssertEqual(baseImage.size.height, 800, accuracy: 0.01)
+
+        let detailImage = try XCTUnwrap(
+            rasterizer.render(
+                logicalRect: CGRect(x: 40, y: 80, width: 50, height: 60),
+                pixelsPerLogicalPoint: 3,
+                maximumPixelDimension: 4_096,
+                maximumPixelCount: 14_000_000
+            )
+        )
+        XCTAssertEqual(detailImage.size.width, 150, accuracy: 0.01)
+        XCTAssertEqual(detailImage.size.height, 180, accuracy: 0.01)
     }
 #endif
 
