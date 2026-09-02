@@ -2,6 +2,14 @@
 
 ## Unreleased — Native PDFKit/PencilKit production editor
 
+- Add a page-local, zoom-aware `CATiledLayer` display for resting PencilKit
+  drawings. It renders bounded tiles from the original `PKDrawing` strokes at
+  the requested presentation scale instead of magnifying the live canvas's
+  cached surface.
+- Keep the native `PKCanvasView` visible while a tool is active, then switch
+  back to the high-resolution display after the Pencil is lifted. Input,
+  erasers, undo, persistence, and PDF page coordinates remain owned by the
+  existing PencilKit canvas.
 - Use PencilKit's supported `.pencilOnly` drawing policy so a finger navigates
   the PDF instead of producing ink, and stop mutating the native drawing
   recognizer's `allowedTouchTypes`.

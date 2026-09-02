@@ -75,9 +75,17 @@ Use a page-overlay provider supported by PDFKit rather than a global canvas. The
 9. Do not pin the page canvas's internal scroll and zoom state to one on every
    layout pass. PDFKit may resize or transform the page overlay while zooming,
    and PencilKit must remain able to update its native rendering state.
-10. Changes are autosaved with a short debounce.
-11. When the overlay is about to be discarded, pending drawing data is saved immediately.
-12. The canvas is released so large PDFs do not create a canvas for every page.
+10. The live `PKCanvasView` remains authoritative for tool interaction, undo,
+    erasing, and persisted `PKDrawing` data. While a tool is active it is the
+    visible renderer, preserving PencilKit's native low-latency input path.
+11. At rest, a sibling `CATiledLayer` view renders bounded regions from the
+    same `PKDrawing` using `image(from:scale:)`. This lets Core Animation ask
+    for magnified levels of detail without creating a full-page high-resolution
+    bitmap or changing page coordinates.
+12. Changes are autosaved with a short debounce.
+13. When the overlay is about to be discarded, pending drawing data is saved immediately.
+14. The overlay and canvas are released so large PDFs do not create an editor
+    or tiled ink renderer for every page.
 
 If iPad testing shows that a specific PDFKit overlay API does not preserve PencilKit geometry correctly, keep the page-bound invariant and document the replacement design before implementing it.
 

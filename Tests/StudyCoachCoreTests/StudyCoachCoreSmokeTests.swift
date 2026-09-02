@@ -42,6 +42,16 @@ final class StudyCoachCoreSmokeTests: XCTestCase {
         XCTAssertFalse(canvas.delegate === canvas)
     }
 
+    func testHighResolutionPageOverlayOwnsTheInteractiveCanvas() {
+        let overlay = PencilPageOverlayView(
+            frame: CGRect(x: 0, y: 0, width: 500, height: 700)
+        )
+
+        XCTAssertTrue(overlay.canvasView.isDescendant(of: overlay))
+        XCTAssertEqual(overlay.canvasView.drawingPolicy, .pencilOnly)
+        overlay.showRenderedDrawing()
+    }
+
     func testNativeToolsExposeStrokeAndPartialErasers() {
         let canvas = PencilPageCanvasView(frame: CGRect(x: 0, y: 0, width: 500, height: 700))
         AnnotationToolConfiguration(

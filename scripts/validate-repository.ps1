@@ -12,6 +12,8 @@ $requiredPaths = @(
     'Sources\StudyCoachCore\PDF\PDFKitContainerView.swift'
     'Sources\StudyCoachCore\PDF\PDFWorkspaceView.swift'
     'Sources\StudyCoachCore\Annotations\PencilPageCanvasView.swift'
+    'Sources\StudyCoachCore\Annotations\PencilPageOverlayView.swift'
+    'Sources\StudyCoachCore\Annotations\PencilDrawingRenderView.swift'
     'Sources\StudyCoachCore\Persistence\StudyCoachDocumentStore.swift'
     'Tests\StudyCoachCoreTests\StudyCoachCoreSmokeTests.swift'
     'THIRD_PARTY_NOTICES.md'
@@ -38,6 +40,12 @@ $pdfContainer = Get-Content -LiteralPath (
 ) -Raw
 $paperKitDiagnostic = Get-Content -LiteralPath (
     Join-Path $repositoryRoot 'Sources\StudyCoachCore\Diagnostics\StudyCoachPaperKitDiagnosticView.swift'
+) -Raw
+$pageOverlay = Get-Content -LiteralPath (
+    Join-Path $repositoryRoot 'Sources\StudyCoachCore\Annotations\PencilPageOverlayView.swift'
+) -Raw
+$drawingRenderer = Get-Content -LiteralPath (
+    Join-Path $repositoryRoot 'Sources\StudyCoachCore\Annotations\PencilDrawingRenderView.swift'
 ) -Raw
 $paperKitPDFDiagnostic = Get-Content -LiteralPath (
     Join-Path $repositoryRoot 'Sources\StudyCoachCore\Diagnostics\StudyCoachPaperKitPDFDiagnosticView.swift'
@@ -150,6 +158,31 @@ foreach ($forbiddenCanvasText in @(
     }
 }
 
+foreach ($requiredRendererText in @(
+    'PencilPageOverlayView'
+    'PencilDrawingRenderView'
+    'canvasView.onToolUseBegan'
+    'canvasView.onToolUseEnded'
+)) {
+    if (-not $pageOverlay.Contains($requiredRendererText)) {
+        throw "PencilPageOverlayView is missing high-resolution display wiring: $requiredRendererText"
+    }
+}
+
+foreach ($requiredRendererText in @(
+    'CATiledLayer'
+    'levelsOfDetailBias = 4'
+    'drawing.image(from: sourceRect, scale: boundedScale)'
+)) {
+    if (-not $drawingRenderer.Contains($requiredRendererText)) {
+        throw "PencilDrawingRenderView is missing zoom-aware rendering: $requiredRendererText"
+    }
+}
+
+if ($drawingRenderer.Contains('contentScaleFactor =')) {
+    throw 'Do not reintroduce the contentScaleFactor-only workaround; it does not rerender PencilKit ink.'
+}
+
 if (Test-Path -LiteralPath (
     Join-Path $repositoryRoot 'Sources\StudyCoachCore\Annotations\PencilStrokeGestureRecognizer.swift'
 )) {
@@ -157,13 +190,15 @@ if (Test-Path -LiteralPath (
 }
 
 foreach ($requiredInteractionText in @(
-    'enablePageOverlayInteraction(canvas, in: pdfView)'
+    'enablePageOverlayInteraction(overlay, in: pdfView)'
     'pdfView.documentView?.isUserInteractionEnabled = true'
     'pdfView.documentView?.subviews.forEach'
     'view.isUserInteractionEnabled = true'
     'pdfView.isInMarkupMode = true'
     'scrollView.panGestureRecognizer.require(toFail: canvas.drawingGestureRecognizer)'
     'UIPencilInteractionDelegate'
+    'PencilPageOverlayView(frame: .zero)'
+    'overlay.showRenderedDrawing()'
 )) {
     if (-not $pdfContainer.Contains($requiredInteractionText)) {
         throw "PDFKitContainerView is missing overlay interaction setup: $requiredInteractionText"

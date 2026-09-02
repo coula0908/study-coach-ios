@@ -33,6 +33,21 @@ remaining acceptance checks pass in Swift Playgrounds on the target iPad.
 - Physical iPadOS 26 acceptance: pending; verify finger navigation, Pencil
   writing, high-zoom ink sharpness, and PDF/ink coordinate alignment together
 
+### Physical-device result: 0.1.8
+
+- Date: 2026-09-02
+- Finger scrolling: passed
+- Two-finger zoom: passed
+- Apple Pencil writing: passed
+- PDF/ink coordinate alignment: passed
+- High-zoom ink quality: failed; removing the canvas's forced one-times state
+  did not improve the pixelated appearance
+- Conclusion: the live `PKCanvasView` render surface is being magnified by the
+  PDF page transform without generating a matching high-resolution level of
+  detail. Input policy and page geometry are no longer part of this defect.
+- Next experiment: keep the canvas as the authoritative editor, but display
+  the resting `PKDrawing` through bounded, zoom-aware `CATiledLayer` tiles
+
 ## Native PDFKit/PencilKit revision
 
 - Date: 2026-09-02

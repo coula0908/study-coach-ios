@@ -132,11 +132,13 @@ struct PDFKitContainerView: UIViewRepresentable {
             let pageIndex = document.index(for: page)
             guard pageIndex != NSNotFound else { return nil }
 
-            let canvas = PencilPageCanvasView(frame: .zero)
+            let overlay = PencilPageOverlayView(frame: .zero)
+            let canvas = overlay.canvasView
             canvas.documentID = parent.documentID
             canvas.pageIndex = pageIndex
-            canvas.onDrawingChanged = { [weak self, weak canvas] in
-                guard let self, let canvas else { return }
+            canvas.onDrawingChanged = { [weak self, weak overlay, weak canvas] in
+                guard let self, let overlay, let canvas else { return }
+                overlay.drawingDidChange()
                 self.scheduleSave(canvas)
             }
             parent.toolConfiguration.apply(to: canvas)
@@ -147,15 +149,16 @@ struct PDFKitContainerView: UIViewRepresentable {
                 if let drawing = try? PKDrawing(data: cachedData) {
                     canvas.drawing = drawing
                 }
+                overlay.showRenderedDrawing()
                 updateActiveCanvas()
-                return canvas
+                return overlay
             }
 
             let documentID = parent.documentID
             let store = parent.store
-            Task { [weak self, weak canvas] in
+            Task { [weak self, weak overlay, weak canvas] in
                 let data = await store.drawingData(for: documentID, pageIndex: pageIndex)
-                guard let self, let canvas else { return }
+                guard let self, let overlay, let canvas else { return }
                 guard self.canvases[key]?.value === canvas else { return }
 
                 if let data, let drawing = try? PKDrawing(data: data) {
@@ -168,17 +171,21 @@ struct PDFKitContainerView: UIViewRepresentable {
                         )
                     }
                 }
+                overlay.showRenderedDrawing()
                 self.updateActiveCanvas()
             }
 
-            return canvas
+            overlay.showRenderedDrawing()
+            return overlay
         }
 
         func pdfView(_ pdfView: PDFView, willDisplayOverlayView overlayView: UIView, for page: PDFPage) {
-            guard let canvas = overlayView as? PencilPageCanvasView else { return }
-            enablePageOverlayInteraction(canvas, in: pdfView)
+            guard let overlay = overlayView as? PencilPageOverlayView else { return }
+            let canvas = overlay.canvasView
+            enablePageOverlayInteraction(overlay, in: pdfView)
             prioritizePencilKitInput(canvas, in: pdfView)
             parent.toolConfiguration.apply(to: canvas)
+            overlay.showRenderedDrawing()
             updateActiveCanvas()
 
             DispatchQueue.main.async { [weak canvas] in
@@ -188,7 +195,8 @@ struct PDFKitContainerView: UIViewRepresentable {
         }
 
         func pdfView(_ pdfView: PDFView, willEndDisplayingOverlayView overlayView: UIView, for page: PDFPage) {
-            guard let canvas = overlayView as? PencilPageCanvasView else { return }
+            guard let overlay = overlayView as? PencilPageOverlayView else { return }
+            let canvas = overlay.canvasView
             saveImmediately(canvas)
             let key = DrawingKey(documentID: canvas.documentID, pageIndex: canvas.pageIndex)
             if canvases[key]?.value === canvas {

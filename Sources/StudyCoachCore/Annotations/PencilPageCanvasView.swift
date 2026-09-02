@@ -8,6 +8,8 @@ final class PencilPageCanvasView: PKCanvasView {
     var documentID = ""
     var pageIndex = 0
     var onDrawingChanged: (() -> Void)?
+    var onToolUseBegan: (() -> Void)?
+    var onToolUseEnded: (() -> Void)?
     private let drawingDelegate = PencilPageCanvasDelegate()
 
     override init(frame: CGRect) {
@@ -58,6 +60,14 @@ private final class PencilPageCanvasDelegate: NSObject, PKCanvasViewDelegate {
 
     func canvasViewDrawingDidChange(_ canvasView: PKCanvasView) {
         canvas?.onDrawingChanged?()
+    }
+
+    func canvasViewDidBeginUsingTool(_ canvasView: PKCanvasView) {
+        canvas?.onToolUseBegan?()
+    }
+
+    func canvasViewDidEndUsingTool(_ canvasView: PKCanvasView) {
+        canvas?.onToolUseEnded?()
     }
 }
 
