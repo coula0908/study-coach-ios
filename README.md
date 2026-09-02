@@ -20,6 +20,8 @@ The first PDF-and-Pencil MVP is implemented and passes Apple-toolchain compilati
 - GitHub macOS workflow that compiles the package and tests for an iOS Simulator target
 - An opt-in `StudyCoachPaperKitDiagnosticView` that tests PaperKit independently
   without changing the production PDF app
+- An opt-in `StudyCoachPaperKitPDFDiagnosticView` that tests a tiled PDF page,
+  page-local PaperMarkup, zoom alignment, navigation, and restoration
 
 Runtime behavior still needs to be checked in Swift Playgrounds on the user's iPadOS 26 device. Until that pass is recorded, coordinate alignment and gesture behavior are implemented but not device-verified.
 
@@ -27,7 +29,8 @@ The production root view remains `StudyCoachRootView()`. Before committing to a
 new annotation engine, the separate PaperKit capability spike can be launched
 temporarily with `StudyCoachPaperKitDiagnosticView()`. See the complete
 [PaperKit diagnostic procedure](docs/PAPERKIT_DIAGNOSTIC.md). A successful
-standalone diagnostic does not authorize or validate PaperKit as a PDF overlay.
+standalone diagnostic does not by itself authorize PaperKit for PDFs. The next
+isolated step is the [PaperKit PDF-page procedure](docs/PAPERKIT_PDF_DIAGNOSTIC.md).
 
 ## Package structure
 
