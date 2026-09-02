@@ -53,6 +53,10 @@ remaining acceptance checks pass in Swift Playgrounds on the target iPad.
   `PKCanvasViewDelegate` and assigned `delegate = self`
 - Fix: retain a separate `PencilPageCanvasDelegate` observer and add source and
   Apple-toolchain regression checks preventing self-delegation
+- Fix commit: `d2babb5a3d1566cfa6408b29c3aaf7cfbe8edeb8`
+- Workflow run: <https://github.com/coula0908/study-coach-ios/actions/runs/33627266823>
+- Xcode 16.4 / iOS 18.5 Simulator: build and tests passed
+- Xcode 26.6 / iOS 26.5 Simulator: build and tests passed
 - Physical retest: pending
 
 The device test must specifically check that this `.anyInput` plus explicit
