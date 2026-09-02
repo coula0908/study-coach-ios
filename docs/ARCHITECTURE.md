@@ -105,15 +105,15 @@ additional highlighter minimum.
 
 ## External references
 
-- Apple, "What's new in PDFKit" (WWDC22): the authoritative
-  `PDFPageOverlayViewProvider` plus `PKCanvasView` lifecycle.
-- `DannyBehar/PDFViewer` (MIT): a small SwiftUI wrapper confirming the same
+- Apple, ["What's new in PDFKit" (WWDC22)](https://developer.apple.com/videos/play/wwdc2022/10089/):
+  the authoritative `PDFPageOverlayViewProvider` plus `PKCanvasView` lifecycle.
+- [`DannyBehar/PDFViewer`](https://github.com/DannyBehar/PDFViewer) (MIT): a small SwiftUI wrapper confirming the same
   provider boundary; referenced but not added as a package because its current
   Swift toolchain requirement is newer than this package's 5.9 manifest.
-- `theagitist/Pumice` (MIT): retained as a fallback reference for iPadOS 26
+- [`theagitist/Pumice`](https://github.com/theagitist/Pumice) (MIT): retained as a fallback reference for iPadOS 26
   Pencil routing and PDF Ink export, but its manual stroke path is no longer
   used by the production editor.
-- `TheProductArchitect/cecilias-notes` (MIT): retained as a reference for
+- [`TheProductArchitect/cecilias-notes`](https://github.com/TheProductArchitect/cecilias-notes) (MIT): retained as a reference for
   advanced PencilKit tools and bounded lazy canvas mounting.
 
 ## Delivery stages
