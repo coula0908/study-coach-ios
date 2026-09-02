@@ -66,11 +66,15 @@ Use a page-overlay provider supported by PDFKit rather than a global canvas. The
 6. PencilKit owns raw Pencil sampling, prediction, pressure/tilt handling,
    rendering, erasing, and undo registration. Production code must not build
    ordinary handwritten `PKStroke` values from a `UIBezierPath`.
-7. When PDFKit displays an overlay, interaction is enabled on the canvas, its
+7. A separate delegate object observes each canvas. A `PKCanvasView` subclass
+   must never assign itself as its own delegate: on the target iPadOS 26 build,
+   PencilKit recursively enters `_canvasViewWillBeginDrawing:` when the first
+   Pencil stroke begins and overflows the main-thread stack.
+8. When PDFKit displays an overlay, interaction is enabled on the canvas, its
    page-container ancestors, and the document view.
-8. Changes are autosaved with a short debounce.
-9. When the overlay is about to be discarded, pending drawing data is saved immediately.
-10. The canvas is released so large PDFs do not create a canvas for every page.
+9. Changes are autosaved with a short debounce.
+10. When the overlay is about to be discarded, pending drawing data is saved immediately.
+11. The canvas is released so large PDFs do not create a canvas for every page.
 
 If iPad testing shows that a specific PDFKit overlay API does not preserve PencilKit geometry correctly, keep the page-bound invariant and document the replacement design before implementing it.
 

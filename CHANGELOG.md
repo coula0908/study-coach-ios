@@ -2,6 +2,10 @@
 
 ## Unreleased — Native PDFKit/PencilKit production editor
 
+- Fix a physical iPadOS 26 stack-overflow crash at the beginning of the first
+  Pencil stroke by moving `PKCanvasViewDelegate` callbacks to a separate,
+  retained observer instead of making the `PKCanvasView` subclass its own
+  delegate.
 - Keep `PDFView` as the only owner of PDF layout, scrolling, zooming, page
   rotation, and crop-box transforms.
 - Replace the Pumice-derived manual touch sampler, `CAShapeLayer` preview, and

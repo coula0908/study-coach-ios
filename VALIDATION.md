@@ -11,7 +11,8 @@
 - PaperKit standalone diagnostic: Xcode 16.4 and Xcode 26.6 CI passed; physical iPadOS 26 launch, writing feel, and high-zoom ink quality passed with `0.1.4`
 - Native PDFKit/PencilKit revision: Xcode 16.4 and Xcode 26.6 builds and iPad
   Simulator tests passed on 2026-09-02; physical iPadOS 26 input/high-zoom
-  verification is pending
+  verification found and diagnosed a first-stroke stack-overflow crash; the
+  delegate fix now requires a physical-device retest
 
 Do not mark the MVP complete until the native Pencil input path and the
 remaining acceptance checks pass in Swift Playgrounds on the target iPad.
@@ -35,6 +36,28 @@ remaining acceptance checks pass in Swift Playgrounds on the target iPad.
 - Xcode 16.4 / iOS 18.5 Simulator: build passed; 6 tests, 0 failures
 - Xcode 26.6 / iOS 26.5 Simulator: build passed; 7 tests, 0 failures
 - Physical iPadOS 26 acceptance: pending
+
+### Physical-device crash diagnosis
+
+- Date: 2026-09-02
+- Device: iPad13,8
+- OS recorded by the crash report: iPadOS 26.6.1 (23G83)
+- App process lifetime: approximately 2.18 seconds
+- Exception: `EXC_BAD_ACCESS (SIGSEGV)`, `KERN_PROTECTION_FAILURE` in the main
+  thread's stack guard
+- Trigger: PencilKit handling `touchesBegan` for the first drawing sequence
+- Decisive backtrace: 3,518 recursive frames of
+  `-[PKCanvasView _canvasViewWillBeginDrawing:]`, reached through
+  `-[UIScrollView delegate]`
+- Root cause in package code: `PencilPageCanvasView` conformed to
+  `PKCanvasViewDelegate` and assigned `delegate = self`
+- Fix: retain a separate `PencilPageCanvasDelegate` observer and add source and
+  Apple-toolchain regression checks preventing self-delegation
+- Fix commit: `d2babb5a3d1566cfa6408b29c3aaf7cfbe8edeb8`
+- Workflow run: <https://github.com/coula0908/study-coach-ios/actions/runs/33627266823>
+- Xcode 16.4 / iOS 18.5 Simulator: build and tests passed
+- Xcode 26.6 / iOS 26.5 Simulator: build and tests passed
+- Physical retest: pending
 
 The device test must specifically check that this `.anyInput` plus explicit
 Pencil-touch and gesture-priority combination fixes the `0.1.1` input failure.
