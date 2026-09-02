@@ -163,10 +163,15 @@ foreach ($requiredRendererText in @(
     'PencilDrawingRenderView'
     'canvasView.onToolUseBegan'
     'canvasView.onToolUseEnded'
+    'canvasView.layer.opacity = visible ? 1 : 0.01'
 )) {
     if (-not $pageOverlay.Contains($requiredRendererText)) {
         throw "PencilPageOverlayView is missing high-resolution display wiring: $requiredRendererText"
     }
+}
+
+if ($pageOverlay -match '(?m)canvasView\.layer\.opacity\s*=\s*visible\s*\?\s*1\s*:\s*0\s*$') {
+    throw 'The resting PKCanvasView must remain active; zero layer opacity prevents Pencil tool input.'
 }
 
 foreach ($requiredRendererText in @(

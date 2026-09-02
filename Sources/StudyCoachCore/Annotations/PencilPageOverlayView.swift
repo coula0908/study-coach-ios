@@ -87,7 +87,10 @@ final class PencilPageOverlayView: UIView {
     private func setCanvasLayerVisible(_ visible: Bool) {
         CATransaction.begin()
         CATransaction.setDisableActions(true)
-        canvasView.layer.opacity = visible ? 1 : 0
+        // Keep a minimally visible render surface. A fully transparent backing
+        // layer can make PencilKit stop beginning tool sequences even though
+        // UIKit hit testing still reaches the PKCanvasView.
+        canvasView.layer.opacity = visible ? 1 : 0.01
         CATransaction.commit()
     }
 }

@@ -65,6 +65,21 @@ remaining acceptance checks pass in Swift Playgrounds on the target iPad.
   sharpness, the live-to-resting transition, tile seams or flashing, finger
   navigation, coordinate alignment, erasers, undo, and restored drawings
 
+### Physical-device result: 0.1.9
+
+- Date: 2026-09-03
+- Previously saved ink high-zoom quality: passed; user reported PaperKit-like
+  sharpness from the zoom-aware tiled display
+- Pen input: failed
+- Highlighter input: failed
+- Eraser input: failed
+- Diagnosis: the resting transition set the authoritative `PKCanvasView`
+  backing layer to zero opacity. Although its view remained interactive,
+  PencilKit did not begin a native tool sequence on the physical device.
+- Follow-up: retain the successful tiled display but keep the live canvas layer
+  at one-percent opacity while resting, returning it to full opacity as soon as
+  PencilKit begins a tool sequence
+
 ## Native PDFKit/PencilKit revision
 
 - Date: 2026-09-02

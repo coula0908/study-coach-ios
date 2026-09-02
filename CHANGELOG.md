@@ -2,6 +2,9 @@
 
 ## Unreleased — Native PDFKit/PencilKit production editor
 
+- Keep the resting native canvas layer at one-percent opacity instead of fully
+  transparent so PencilKit continues to begin pen, highlighter, and eraser
+  input sequences while the sharp tiled drawing remains visually dominant.
 - Add a page-local, zoom-aware `CATiledLayer` display for resting PencilKit
   drawings. It renders bounded tiles from the original `PKDrawing` strokes at
   the requested presentation scale instead of magnifying the live canvas's
