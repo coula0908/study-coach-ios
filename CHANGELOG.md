@@ -1,5 +1,22 @@
 # Changelog
 
+## Unreleased — Native PDFKit/PencilKit production editor
+
+- Keep `PDFView` as the only owner of PDF layout, scrolling, zooming, page
+  rotation, and crop-box transforms.
+- Replace the Pumice-derived manual touch sampler, `CAShapeLayer` preview, and
+  synthesized `PKStroke` path with PencilKit's native drawing recognizer and
+  renderer.
+- Match Apple's overlay example with `.anyInput`, restrict the recognizer to
+  Apple Pencil, and make PDFKit's pan gesture wait for native drawing input.
+- Add native PencilKit stroke and partial erasers.
+- Add Apple Pencil double-tap switching between eraser and the most recently
+  used pen or highlighter.
+- Lower the custom ink-width range to 0.25 points and remove the forced
+  eight-point highlighter minimum.
+- Retire the tiled PaperKit PDF experiment from the production direction; its
+  public diagnostic remains available only for comparison.
+
 ## Unreleased — PaperKit PDF-page diagnostic
 
 - Add public `StudyCoachPaperKitPDFDiagnosticView` without changing the

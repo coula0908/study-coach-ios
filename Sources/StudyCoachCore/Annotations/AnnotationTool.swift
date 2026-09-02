@@ -26,10 +26,25 @@ enum AnnotationTool: String, CaseIterable, Identifiable {
     }
 }
 
+enum AnnotationEraserMode: String, CaseIterable, Identifiable {
+    case stroke
+    case partial
+
+    var id: Self { self }
+
+    var title: String {
+        switch self {
+        case .stroke: "획 지우개"
+        case .partial: "부분 지우개"
+        }
+    }
+}
+
 struct AnnotationToolConfiguration {
     let tool: AnnotationTool
     let color: UIColor
     let width: CGFloat
+    let eraserMode: AnnotationEraserMode
 
     func apply(to canvas: PencilPageCanvasView) {
         switch tool {
@@ -39,11 +54,12 @@ struct AnnotationToolConfiguration {
             canvas.tool = PKInkingTool(
                 .marker,
                 color: color.withAlphaComponent(0.45),
-                width: max(width * 2.5, 8)
+                width: width
             )
         case .eraser:
-            canvas.tool = PKEraserTool(.vector)
+            canvas.tool = PKEraserTool(
+                eraserMode == .stroke ? .vector : .bitmap
+            )
         }
-        canvas.apply(self)
     }
 }

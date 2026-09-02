@@ -12,7 +12,6 @@ $requiredPaths = @(
     'Sources\StudyCoachCore\PDF\PDFKitContainerView.swift'
     'Sources\StudyCoachCore\PDF\PDFWorkspaceView.swift'
     'Sources\StudyCoachCore\Annotations\PencilPageCanvasView.swift'
-    'Sources\StudyCoachCore\Annotations\PencilStrokeGestureRecognizer.swift'
     'Sources\StudyCoachCore\Persistence\StudyCoachDocumentStore.swift'
     'Tests\StudyCoachCoreTests\StudyCoachCoreSmokeTests.swift'
     'THIRD_PARTY_NOTICES.md'
@@ -36,9 +35,6 @@ $pageCanvas = Get-Content -LiteralPath (
 ) -Raw
 $pdfContainer = Get-Content -LiteralPath (
     Join-Path $repositoryRoot 'Sources\StudyCoachCore\PDF\PDFKitContainerView.swift'
-) -Raw
-$pencilRecognizer = Get-Content -LiteralPath (
-    Join-Path $repositoryRoot 'Sources\StudyCoachCore\Annotations\PencilStrokeGestureRecognizer.swift'
 ) -Raw
 $paperKitDiagnostic = Get-Content -LiteralPath (
     Join-Path $repositoryRoot 'Sources\StudyCoachCore\Diagnostics\StudyCoachPaperKitDiagnosticView.swift'
@@ -126,25 +122,21 @@ if (-not $pageCanvas.Contains('isUserInteractionEnabled = true')) {
 }
 
 foreach ($requiredCanvasText in @(
-    'drawingPolicy = .pencilOnly'
-    'drawingGestureRecognizer.isEnabled = false'
-    'PencilStrokeGestureRecognizer'
-    'PKStrokePoint('
-    'PKDrawing(strokes:'
+    'drawingPolicy = .anyInput'
+    'drawingGestureRecognizer.isEnabled = true'
+    'drawingGestureRecognizer.allowedTouchTypes'
+    'PKCanvasViewDelegate'
+    'canvasViewDrawingDidChange'
 )) {
     if (-not $pageCanvas.Contains($requiredCanvasText)) {
-        throw "PencilPageCanvasView is missing adopted Pencil routing: $requiredCanvasText"
+        throw "PencilPageCanvasView is missing native PencilKit routing: $requiredCanvasText"
     }
 }
 
-foreach ($requiredRecognizerText in @(
-    'allowedTouchTypes = [NSNumber(value: UITouch.TouchType.pencil.rawValue)]'
-    'event.coalescedTouches(for: touch)'
-    'touch.type == .pencil'
+if (Test-Path -LiteralPath (
+    Join-Path $repositoryRoot 'Sources\StudyCoachCore\Annotations\PencilStrokeGestureRecognizer.swift'
 )) {
-    if (-not $pencilRecognizer.Contains($requiredRecognizerText)) {
-        throw "PencilStrokeGestureRecognizer is missing: $requiredRecognizerText"
-    }
+    throw 'The manual Pencil stroke synthesizer must not be part of the native PencilKit editor.'
 }
 
 foreach ($requiredInteractionText in @(
@@ -153,6 +145,8 @@ foreach ($requiredInteractionText in @(
     'pdfView.documentView?.subviews.forEach'
     'view.isUserInteractionEnabled = true'
     'pdfView.isInMarkupMode = true'
+    'scrollView.panGestureRecognizer.require(toFail: canvas.drawingGestureRecognizer)'
+    'UIPencilInteractionDelegate'
 )) {
     if (-not $pdfContainer.Contains($requiredInteractionText)) {
         throw "PDFKitContainerView is missing overlay interaction setup: $requiredInteractionText"

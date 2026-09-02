@@ -13,8 +13,10 @@ struct PDFWorkspaceView: View {
 
     @StateObject private var proxy = PDFViewerProxy()
     @State private var selectedTool: AnnotationTool = .pen
+    @State private var previousInkingTool: AnnotationTool = .pen
+    @State private var eraserMode: AnnotationEraserMode = .stroke
     @State private var inkColor = Color.blue
-    @State private var strokeWidth = 4.0
+    @State private var strokeWidth = 2.0
     @State private var pageInput = "1"
 
     var body: some View {
@@ -31,10 +33,12 @@ struct PDFWorkspaceView: View {
                 toolConfiguration: AnnotationToolConfiguration(
                     tool: selectedTool,
                     color: UIColor(inkColor),
-                    width: strokeWidth
+                    width: strokeWidth,
+                    eraserMode: eraserMode
                 ),
                 store: store,
-                proxy: proxy
+                proxy: proxy,
+                onPencilDoubleTap: toggleEraser
             )
         }
         .background(Color(uiColor: .systemBackground))
@@ -111,7 +115,7 @@ struct PDFWorkspaceView: View {
             HStack(spacing: 10) {
                 ForEach(AnnotationTool.allCases) { tool in
                     Button {
-                        selectedTool = tool
+                        selectTool(tool)
                     } label: {
                         Label(tool.title, systemImage: tool.systemImage)
                     }
@@ -120,6 +124,18 @@ struct PDFWorkspaceView: View {
                 }
 
                 Divider().frame(height: 26)
+
+                if selectedTool == .eraser {
+                    Picker("지우개 방식", selection: $eraserMode) {
+                        ForEach(AnnotationEraserMode.allCases) { mode in
+                            Text(mode.title).tag(mode)
+                        }
+                    }
+                    .pickerStyle(.segmented)
+                    .frame(width: 190)
+
+                    Divider().frame(height: 26)
+                }
 
                 Button(action: proxy.undo) {
                     Label("실행 취소", systemImage: "arrow.uturn.backward")
@@ -139,13 +155,13 @@ struct PDFWorkspaceView: View {
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
 
-                Slider(value: $strokeWidth, in: 1...20, step: 1)
+                Slider(value: $strokeWidth, in: 0.25...20, step: 0.25)
                     .frame(width: 150)
                     .disabled(selectedTool == .eraser)
 
-                Text("\(Int(strokeWidth))")
+                Text(strokeWidth.formatted(.number.precision(.fractionLength(0...2))))
                     .font(.subheadline.monospacedDigit())
-                    .frame(width: 24)
+                    .frame(width: 40)
                     .foregroundStyle(.secondary)
             }
             .buttonStyle(.bordered)
@@ -163,5 +179,21 @@ struct PDFWorkspaceView: View {
         let targetIndex = min(max(enteredPage - 1, 0), max(document.pageCount - 1, 0))
         pageInput = String(targetIndex + 1)
         proxy.go(to: targetIndex)
+    }
+
+    private func selectTool(_ tool: AnnotationTool) {
+        if tool != .eraser {
+            previousInkingTool = tool
+        }
+        selectedTool = tool
+    }
+
+    private func toggleEraser() {
+        if selectedTool == .eraser {
+            selectedTool = previousInkingTool
+        } else {
+            previousInkingTool = selectedTool
+            selectedTool = .eraser
+        }
     }
 }
