@@ -80,6 +80,22 @@ remaining acceptance checks pass in Swift Playgrounds on the target iPad.
   at one-percent opacity while resting, returning it to full opacity as soon as
   PencilKit begins a tool sequence
 
+### Physical-device result: 0.1.10
+
+- Date: 2026-09-03
+- Pen input: failed
+- Highlighter input: failed
+- Eraser input: failed
+- Conclusion: retaining one-percent canvas layer opacity did not restore any
+  PencilKit tool. The zero-opacity diagnosis was disproved.
+- Revised diagnosis: `0.1.8` returned `PKCanvasView` itself as PDFKit's page
+  overlay and all three tools worked. `0.1.9` and `0.1.10` returned a generic
+  wrapper containing the canvas and all three tools failed. The wrapper is the
+  changed input boundary.
+- Follow-up: return the native canvas as the top-level PDFKit overlay again and
+  attach the already successful sharp renderer as a noninteractive sibling in
+  the same PDF page container
+
 ## Native PDFKit/PencilKit revision
 
 - Date: 2026-09-02

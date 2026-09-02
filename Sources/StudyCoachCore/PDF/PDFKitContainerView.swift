@@ -71,6 +71,7 @@ struct PDFKitContainerView: UIViewRepresentable {
         private var pageObserver: NSObjectProtocol?
         private var backgroundObserver: NSObjectProtocol?
         private var canvases: [DrawingKey: WeakCanvas] = [:]
+        private var inkPresentations: [DrawingKey: PencilPageInkPresentation] = [:]
         private var drawingCache: [DrawingKey: Data] = [:]
         private var saveTasks: [DrawingKey: Task<Void, Never>] = [:]
         private var pencilInteraction: UIPencilInteraction?
@@ -121,6 +122,10 @@ struct PDFKitContainerView: UIViewRepresentable {
             }
             pencilInteraction = nil
             saveTasks.removeAll()
+            for presentation in inkPresentations.values {
+                presentation.detach()
+            }
+            inkPresentations.removeAll()
             canvases.removeAll()
             parent.proxy.activeCanvas = nil
             parent.proxy.pdfView = nil
@@ -132,33 +137,34 @@ struct PDFKitContainerView: UIViewRepresentable {
             let pageIndex = document.index(for: page)
             guard pageIndex != NSNotFound else { return nil }
 
-            let overlay = PencilPageOverlayView(frame: .zero)
-            let canvas = overlay.canvasView
+            let canvas = PencilPageCanvasView(frame: .zero)
             canvas.documentID = parent.documentID
             canvas.pageIndex = pageIndex
-            canvas.onDrawingChanged = { [weak self, weak overlay, weak canvas] in
-                guard let self, let overlay, let canvas else { return }
-                overlay.drawingDidChange()
+            let presentation = PencilPageInkPresentation(canvasView: canvas)
+            canvas.onDrawingChanged = { [weak self, weak presentation, weak canvas] in
+                guard let self, let presentation, let canvas else { return }
+                presentation.drawingDidChange()
                 self.scheduleSave(canvas)
             }
             parent.toolConfiguration.apply(to: canvas)
             let key = DrawingKey(documentID: canvas.documentID, pageIndex: pageIndex)
             canvases[key] = WeakCanvas(canvas)
+            inkPresentations[key] = presentation
 
             if let cachedData = drawingCache[key] {
                 if let drawing = try? PKDrawing(data: cachedData) {
                     canvas.drawing = drawing
                 }
-                overlay.showRenderedDrawing()
+                presentation.drawingDidChange()
                 updateActiveCanvas()
-                return overlay
+                return canvas
             }
 
             let documentID = parent.documentID
             let store = parent.store
-            Task { [weak self, weak overlay, weak canvas] in
+            Task { [weak self, weak presentation, weak canvas] in
                 let data = await store.drawingData(for: documentID, pageIndex: pageIndex)
-                guard let self, let overlay, let canvas else { return }
+                guard let self, let presentation, let canvas else { return }
                 guard self.canvases[key]?.value === canvas else { return }
 
                 if let data, let drawing = try? PKDrawing(data: data) {
@@ -171,21 +177,23 @@ struct PDFKitContainerView: UIViewRepresentable {
                         )
                     }
                 }
-                overlay.showRenderedDrawing()
+                presentation.showRenderedDrawing()
                 self.updateActiveCanvas()
             }
 
-            overlay.showRenderedDrawing()
-            return overlay
+            presentation.drawingDidChange()
+            return canvas
         }
 
         func pdfView(_ pdfView: PDFView, willDisplayOverlayView overlayView: UIView, for page: PDFPage) {
-            guard let overlay = overlayView as? PencilPageOverlayView else { return }
-            let canvas = overlay.canvasView
-            enablePageOverlayInteraction(overlay, in: pdfView)
+            guard let canvas = overlayView as? PencilPageCanvasView else { return }
+            let key = DrawingKey(documentID: canvas.documentID, pageIndex: canvas.pageIndex)
+            let presentation = inkPresentations[key]
+            enablePageOverlayInteraction(canvas, in: pdfView)
             prioritizePencilKitInput(canvas, in: pdfView)
             parent.toolConfiguration.apply(to: canvas)
-            overlay.showRenderedDrawing()
+            presentation?.installAboveCanvas()
+            presentation?.showRenderedDrawing()
             updateActiveCanvas()
 
             DispatchQueue.main.async { [weak canvas] in
@@ -195,10 +203,11 @@ struct PDFKitContainerView: UIViewRepresentable {
         }
 
         func pdfView(_ pdfView: PDFView, willEndDisplayingOverlayView overlayView: UIView, for page: PDFPage) {
-            guard let overlay = overlayView as? PencilPageOverlayView else { return }
-            let canvas = overlay.canvasView
+            guard let canvas = overlayView as? PencilPageCanvasView else { return }
             saveImmediately(canvas)
             let key = DrawingKey(documentID: canvas.documentID, pageIndex: canvas.pageIndex)
+            inkPresentations[key]?.detach()
+            inkPresentations[key] = nil
             if canvases[key]?.value === canvas {
                 canvases[key] = nil
             }

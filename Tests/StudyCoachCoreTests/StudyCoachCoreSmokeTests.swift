@@ -42,17 +42,19 @@ final class StudyCoachCoreSmokeTests: XCTestCase {
         XCTAssertFalse(canvas.delegate === canvas)
     }
 
-    func testHighResolutionPageOverlayKeepsTheInteractiveCanvasActive() async throws {
-        let overlay = PencilPageOverlayView(
-            frame: CGRect(x: 0, y: 0, width: 500, height: 700)
-        )
+    func testHighResolutionPresentationDoesNotWrapTheInteractiveCanvas() async throws {
+        let host = UIView(frame: CGRect(x: 0, y: 0, width: 500, height: 700))
+        let canvas = PencilPageCanvasView(frame: host.bounds)
+        host.addSubview(canvas)
+        let presentation = PencilPageInkPresentation(canvasView: canvas)
 
-        XCTAssertTrue(overlay.canvasView.isDescendant(of: overlay))
-        XCTAssertEqual(overlay.canvasView.drawingPolicy, .pencilOnly)
-        overlay.showRenderedDrawing()
+        presentation.installAboveCanvas()
+        presentation.showRenderedDrawing()
         try await Task.sleep(nanoseconds: 200_000_000)
-        XCTAssertGreaterThan(overlay.canvasView.layer.opacity, 0)
-        XCTAssertLessThan(overlay.canvasView.layer.opacity, 1)
+        XCTAssertTrue(canvas.superview === host)
+        XCTAssertEqual(canvas.drawingPolicy, .pencilOnly)
+        XCTAssertGreaterThan(canvas.layer.opacity, 0)
+        XCTAssertLessThan(canvas.layer.opacity, 1)
     }
 
     func testNativeToolsExposeStrokeAndPartialErasers() {

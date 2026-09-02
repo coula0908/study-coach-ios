@@ -12,7 +12,7 @@ $requiredPaths = @(
     'Sources\StudyCoachCore\PDF\PDFKitContainerView.swift'
     'Sources\StudyCoachCore\PDF\PDFWorkspaceView.swift'
     'Sources\StudyCoachCore\Annotations\PencilPageCanvasView.swift'
-    'Sources\StudyCoachCore\Annotations\PencilPageOverlayView.swift'
+    'Sources\StudyCoachCore\Annotations\PencilPageInkPresentation.swift'
     'Sources\StudyCoachCore\Annotations\PencilDrawingRenderView.swift'
     'Sources\StudyCoachCore\Persistence\StudyCoachDocumentStore.swift'
     'Tests\StudyCoachCoreTests\StudyCoachCoreSmokeTests.swift'
@@ -41,8 +41,8 @@ $pdfContainer = Get-Content -LiteralPath (
 $paperKitDiagnostic = Get-Content -LiteralPath (
     Join-Path $repositoryRoot 'Sources\StudyCoachCore\Diagnostics\StudyCoachPaperKitDiagnosticView.swift'
 ) -Raw
-$pageOverlay = Get-Content -LiteralPath (
-    Join-Path $repositoryRoot 'Sources\StudyCoachCore\Annotations\PencilPageOverlayView.swift'
+$inkPresentation = Get-Content -LiteralPath (
+    Join-Path $repositoryRoot 'Sources\StudyCoachCore\Annotations\PencilPageInkPresentation.swift'
 ) -Raw
 $drawingRenderer = Get-Content -LiteralPath (
     Join-Path $repositoryRoot 'Sources\StudyCoachCore\Annotations\PencilDrawingRenderView.swift'
@@ -159,18 +159,18 @@ foreach ($forbiddenCanvasText in @(
 }
 
 foreach ($requiredRendererText in @(
-    'PencilPageOverlayView'
+    'PencilPageInkPresentation'
     'PencilDrawingRenderView'
     'canvasView.onToolUseBegan'
     'canvasView.onToolUseEnded'
-    'canvasView.layer.opacity = visible ? 1 : 0.01'
+    'canvasView.layer.opacity = fullyVisible ? 1 : 0.01'
 )) {
-    if (-not $pageOverlay.Contains($requiredRendererText)) {
-        throw "PencilPageOverlayView is missing high-resolution display wiring: $requiredRendererText"
+    if (-not $inkPresentation.Contains($requiredRendererText)) {
+        throw "PencilPageInkPresentation is missing high-resolution display wiring: $requiredRendererText"
     }
 }
 
-if ($pageOverlay -match '(?m)canvasView\.layer\.opacity\s*=\s*visible\s*\?\s*1\s*:\s*0\s*$') {
+if ($inkPresentation -match '(?m)canvasView\.layer\.opacity\s*=\s*fullyVisible\s*\?\s*1\s*:\s*0\s*$') {
     throw 'The resting PKCanvasView must remain active; zero layer opacity prevents Pencil tool input.'
 }
 
@@ -195,15 +195,17 @@ if (Test-Path -LiteralPath (
 }
 
 foreach ($requiredInteractionText in @(
-    'enablePageOverlayInteraction(overlay, in: pdfView)'
+    'enablePageOverlayInteraction(canvas, in: pdfView)'
     'pdfView.documentView?.isUserInteractionEnabled = true'
     'pdfView.documentView?.subviews.forEach'
     'view.isUserInteractionEnabled = true'
     'pdfView.isInMarkupMode = true'
     'scrollView.panGestureRecognizer.require(toFail: canvas.drawingGestureRecognizer)'
     'UIPencilInteractionDelegate'
-    'PencilPageOverlayView(frame: .zero)'
-    'overlay.showRenderedDrawing()'
+    'PencilPageCanvasView(frame: .zero)'
+    'PencilPageInkPresentation(canvasView: canvas)'
+    'presentation?.installAboveCanvas()'
+    'presentation?.showRenderedDrawing()'
 )) {
     if (-not $pdfContainer.Contains($requiredInteractionText)) {
         throw "PDFKitContainerView is missing overlay interaction setup: $requiredInteractionText"

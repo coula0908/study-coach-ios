@@ -2,6 +2,10 @@
 
 ## Unreleased — Native PDFKit/PencilKit production editor
 
+- Restore the verified physical-device input topology by returning the native
+  `PKCanvasView` itself from `PDFPageOverlayViewProvider`. Attach the sharp
+  renderer as a noninteractive sibling in the same page container instead of
+  wrapping the canvas in a generic overlay view.
 - Keep the resting native canvas layer at one-percent opacity instead of fully
   transparent so PencilKit continues to begin pen, highlighter, and eraser
   input sequences while the sharp tiled drawing remains visually dominant.
