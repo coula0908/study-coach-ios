@@ -9,8 +9,9 @@
 - PDF display and navigation: passed on physical iPadOS 26; no stutter reported
 - PencilKit behavior: Apple Pencil writing passed on physical iPadOS 26 with `0.1.2`; the user reported that the app launched and handwriting worked correctly
 - PaperKit standalone diagnostic: Xcode 16.4 and Xcode 26.6 CI passed; physical iPadOS 26 launch, writing feel, and high-zoom ink quality passed with `0.1.4`
-- Native PDFKit/PencilKit revision: implemented on 2026-09-02; Apple CI and
-  physical iPadOS 26 input/high-zoom verification are pending
+- Native PDFKit/PencilKit revision: Xcode 16.4 and Xcode 26.6 builds and iPad
+  Simulator tests passed on 2026-09-02; physical iPadOS 26 input/high-zoom
+  verification is pending
 
 Do not mark the MVP complete until the native Pencil input path and the
 remaining acceptance checks pass in Swift Playgrounds on the target iPad.
@@ -29,7 +30,10 @@ remaining acceptance checks pass in Swift Playgrounds on the target iPad.
 - Added tool behavior: stroke eraser, partial eraser, 0.25-point minimum width,
   and Apple Pencil double-tap pen/eraser toggle
 - Windows static repository validation: passed
-- Apple toolchain compilation: pending
+- GitHub commit: `2ed62ad54601134d56d217081f9d014d1c07a4bc`
+- Workflow run: <https://github.com/coula0908/study-coach-ios/actions/runs/33620229231>
+- Xcode 16.4 / iOS 18.5 Simulator: build passed; 6 tests, 0 failures
+- Xcode 26.6 / iOS 26.5 Simulator: build passed; 7 tests, 0 failures
 - Physical iPadOS 26 acceptance: pending
 
 The device test must specifically check that this `.anyInput` plus explicit

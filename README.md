@@ -7,8 +7,8 @@ The first MVP focuses only on a stable PDF and Apple Pencil workflow. AI coachin
 ## Current stage
 
 The first PDF-and-Pencil MVP is implemented. The current development branch
-returns to Apple's native PDFKit/PencilKit overlay design and awaits Apple CI
-and physical iPadOS 26 verification. Earlier `0.1.2` device testing proved that
+returns to Apple's native PDFKit/PencilKit overlay design, passes Xcode 16.4
+and Xcode 26.6 CI, and awaits physical iPadOS 26 verification. Earlier `0.1.2` device testing proved that
 a manual Pencil route can reach the overlay, while the PaperKit diagnostics
 proved good standalone ink quality but exposed unwanted PDF tile loading. The
 current implementation removes both custom paths from the production editor.
