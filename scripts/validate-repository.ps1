@@ -121,10 +121,15 @@ if (-not $pageCanvas.Contains('isUserInteractionEnabled = true')) {
     throw 'PencilPageCanvasView must accept Pencil interaction immediately.'
 }
 
+if ($pageCanvas.Contains('delegate = self')) {
+    throw 'PencilPageCanvasView must not be its own PKCanvasViewDelegate; this recursively crashes PencilKit when drawing begins.'
+}
+
 foreach ($requiredCanvasText in @(
     'drawingPolicy = .anyInput'
     'drawingGestureRecognizer.isEnabled = true'
     'drawingGestureRecognizer.allowedTouchTypes'
+    'PencilPageCanvasDelegate'
     'PKCanvasViewDelegate'
     'canvasViewDrawingDidChange'
 )) {

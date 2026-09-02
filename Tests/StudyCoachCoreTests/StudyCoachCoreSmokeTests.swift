@@ -37,6 +37,8 @@ final class StudyCoachCoreSmokeTests: XCTestCase {
         let canvas = PencilPageCanvasView(frame: CGRect(x: 0, y: 0, width: 500, height: 700))
         XCTAssertTrue(canvas.drawingGestureRecognizer.isEnabled)
         XCTAssertEqual(canvas.drawingPolicy, .anyInput)
+        XCTAssertNotNil(canvas.delegate)
+        XCTAssertFalse(canvas.delegate === canvas)
         XCTAssertEqual(
             canvas.drawingGestureRecognizer.allowedTouchTypes,
             [NSNumber(value: UITouch.TouchType.pencil.rawValue)]
