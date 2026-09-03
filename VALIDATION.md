@@ -35,6 +35,9 @@ remaining acceptance checks pass in Swift Playgrounds on the target iPad.
 - Second strict-build follow-up: remove the non-Sendable notification token
   from controller deinitialization, isolate PencilKit tool mutation to the main
   actor, and capture immutable raster limits before background queue work
+- Third strict-build follow-up: application sources passed; update the storage
+  test fixture so it transfers a fresh `UserDefaults` instance into the store
+  actor instead of retaining the same non-Sendable reference on both sides
 - Windows repository validation: pending
 - Apple toolchain validation: pending
 - Physical iPadOS 26 acceptance: pending

@@ -160,7 +160,6 @@ final class StudyCoachCoreSmokeTests: XCTestCase {
 
 private struct StoreFixture {
     let rootURL: URL
-    let defaults: UserDefaults
     let suiteName: String
 
     init() throws {
@@ -170,16 +169,16 @@ private struct StoreFixture {
 
         rootURL = temporaryRoot
         suiteName = temporarySuiteName
-        defaults = UserDefaults(suiteName: temporarySuiteName)!
         try FileManager.default.createDirectory(at: temporaryRoot, withIntermediateDirectories: true)
     }
 
     func makeStore() -> StudyCoachDocumentStore {
-        StudyCoachDocumentStore(rootURL: rootURL, defaults: defaults)
+        let storeDefaults = UserDefaults(suiteName: suiteName)!
+        return StudyCoachDocumentStore(rootURL: rootURL, defaults: storeDefaults)
     }
 
     func cleanUp() {
         try? FileManager.default.removeItem(at: rootURL)
-        defaults.removePersistentDomain(forName: suiteName)
+        UserDefaults(suiteName: suiteName)?.removePersistentDomain(forName: suiteName)
     }
 }
