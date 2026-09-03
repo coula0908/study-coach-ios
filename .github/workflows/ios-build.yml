@@ -35,6 +35,18 @@ jobs:
           -skipPackagePluginValidation
           CODE_SIGNING_ALLOWED=NO
 
+      - name: Compile PaperKit path with Swift 6 strict concurrency
+        if: matrix.runner == 'macos-26'
+        run: >-
+          xcodebuild
+          build-for-testing
+          -scheme StudyCoachCore
+          -destination 'generic/platform=iOS Simulator'
+          -skipPackagePluginValidation
+          CODE_SIGNING_ALLOWED=NO
+          SWIFT_VERSION=6
+          SWIFT_STRICT_CONCURRENCY=complete
+
       - name: Run unit tests on an iPad Simulator
         shell: bash
         run: |

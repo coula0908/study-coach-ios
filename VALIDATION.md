@@ -18,6 +18,21 @@
 Do not mark the MVP complete until the native Pencil input path and the
 remaining acceptance checks pass in Swift Playgrounds on the target iPad.
 
+## Swift Playgrounds delegate compatibility: 0.1.15
+
+- Date: 2026-09-03
+- Physical-device compiler result for 0.1.14: failed before launch because the
+  main-actor `PaperKitPDFViewportObserver` conformance crossed into the
+  nonisolated `PaperMarkupViewController.Delegate` protocol in Swift 6 mode
+- Fix: mark that conformance `@preconcurrency`; PaperKit is a UIKit controller
+  and delivers this UI delegate callback on the main actor, while Swift inserts
+  the corresponding runtime isolation check
+- CI regression coverage: add an Xcode 26 build with `SWIFT_VERSION=6` and
+  `SWIFT_STRICT_CONCURRENCY=complete`
+- Windows repository validation: pending
+- Apple toolchain validation: pending
+- Physical iPadOS 26 acceptance: pending
+
 ## Immediate adaptive detail candidate: 0.1.14
 
 - Date: 2026-09-03

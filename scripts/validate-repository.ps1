@@ -92,8 +92,8 @@ if ($rootView.Contains('StudyCoachPaperKitDiagnosticView')) {
     throw 'StudyCoachRootView must not route production users into the PaperKit diagnostic.'
 }
 
-if (-not $versionDocument.Contains('Current package version: `0.1.14`')) {
-    throw 'VERSION.md must identify the source tree as package version 0.1.14.'
+if (-not $versionDocument.Contains('Current package version: `0.1.15`')) {
+    throw 'VERSION.md must identify the source tree as package version 0.1.15.'
 }
 
 if ($rootView.Contains('StudyCoachPaperKitPDFDiagnosticView')) {
@@ -109,6 +109,7 @@ foreach ($requiredPaperKitPDFText in @(
     'detailImageView'
     'contentVisibleFrame'
     'PaperKitPDFViewportObserver'
+    '@preconcurrency PaperMarkupViewController.Delegate'
     'paperMarkupViewControllerDidChangeContentVisibleFrame'
     'detailRenderIsInFlight'
     'pendingDetailRequest'

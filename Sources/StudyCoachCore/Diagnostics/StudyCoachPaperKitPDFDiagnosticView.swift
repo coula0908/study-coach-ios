@@ -357,7 +357,8 @@ private struct PaperKitPDFPageContainer: UIViewControllerRepresentable {
 
 @available(iOS 26.0, *)
 @MainActor
-final class PaperKitPDFViewportObserver: NSObject, PaperMarkupViewController.Delegate {
+final class PaperKitPDFViewportObserver:
+    NSObject, @preconcurrency PaperMarkupViewController.Delegate {
     var onVisibleFrameChange: ((PaperMarkupViewController) -> Void)?
 
     func paperMarkupViewControllerDidChangeContentVisibleFrame(

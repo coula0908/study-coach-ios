@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.15 — Swift Playgrounds delegate compatibility
+
+- Mark the main-actor PaperKit viewport delegate conformance as
+  `@preconcurrency`, matching Swift's documented interoperability path for a
+  UI delegate protocol whose requirement lacks actor isolation.
+- Fix the Swift Playgrounds Swift 6 error that reported
+  `PaperKitPDFViewportObserver` did not conform to
+  `PaperMarkupViewController.Delegate`.
+- Add a strict Swift 6 concurrency build for the PaperKit path to the Xcode 26
+  CI job so the package's default Swift 5 language mode cannot hide this class
+  of device-side compiler error again.
+
 ## 0.1.14 — Immediate adaptive PDF detail rendering
 
 - Remove the fixed 0.3-second settle delay and the 0.1-second viewport polling
