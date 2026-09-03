@@ -29,8 +29,13 @@ remaining acceptance checks pass in Swift Playgrounds on the target iPad.
   request; stale completed images are discarded
 - Production entry point: unchanged `StudyCoachRootView()`; physical testing
   continues through `StudyCoachPaperKitPDFDiagnosticView()`
-- Windows repository validation: pending
-- Apple toolchain validation: pending
+- Windows repository validation: passed (`scripts/validate-repository.ps1` and
+  `git diff --check` on 2026-09-03)
+- Apple validation commit: `a4ef1259e062194ab7d3549b1bdf1821844234a8`
+- Workflow run: <https://github.com/coula0908/study-coach-ios/actions/runs/33723091067>
+- Xcode 16.4 fallback build and iPad Simulator tests: passed
+- Xcode 26 PaperKit build and iPad Simulator tests: passed, including assignment
+  of the retained visible-frame delegate observer
 - Physical iPadOS 26 acceptance: pending
 
 ## Adaptive PaperKit PDF candidate: 0.1.13
