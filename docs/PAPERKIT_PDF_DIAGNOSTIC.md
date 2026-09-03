@@ -44,9 +44,10 @@ already displayed.
 6. A thin diagonal stroke stays sharp at maximum zoom.
 7. The PDF page first appears as one complete page, never as successively
    appearing white or blank rectangular tiles.
-8. While pinching, the complete base page remains visible. PaperKit's
-   visible-frame callback starts detail rendering immediately; there is no
-   additional 0.3-second wait after the gesture.
+8. While pinching, the complete base page remains visible. A main-actor monitor
+   checks the visible frame about every 33 milliseconds and starts detail
+   rendering as soon as it detects a change; there is no additional 0.3-second
+   wait after the gesture.
 9. The PDF text and lines become sharp again after that rerender completes.
 10. Ink remains anchored to the same printed word or line while zooming and panning.
 11. Draw on page 1, move to page 2, draw there, and return to page 1.
@@ -71,9 +72,13 @@ or their alignment.
   matching the coordinate density of the accepted `0.1.4` standalone test.
 - A complete page image is rendered at four pixels per original PDF point. The
   longest side is capped at 4096 pixels and total output at 14 million pixels.
-- When PaperKit reports a visible-frame change, an 18-percent overscanned
-  visible region is requested immediately at 1.2 times the physical
-  presentation density, subject to the same allocation bounds.
+- A main-actor task samples `contentVisibleFrame` about every 33 milliseconds.
+  When it detects a changed frame, an 18-percent overscanned visible region is
+  requested immediately at 1.2 times the physical presentation density,
+  subject to the same allocation bounds.
+- The diagnostic deliberately does not conform to
+  `PaperMarkupViewController.Delegate`: the physical Swift Playgrounds SDK
+  rejects that conformance even though Xcode 26 accepts it.
 - Detail work is bounded to one active render and one replaceable pending
   request. During a gesture, stale results are discarded and only the latest
   viewport waits to render, so work cannot accumulate in an unbounded queue.

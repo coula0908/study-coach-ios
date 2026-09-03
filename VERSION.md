@@ -1,6 +1,6 @@
 # StudyCoachCore version
 
-Current package version: `0.1.15`
+Current package version: `0.1.16`
 
 This file records the Git tag that Swift Playgrounds should resolve for this
 source tree. Open `VERSION.md` under the `study-coach-ios` package in the

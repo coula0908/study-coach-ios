@@ -357,23 +357,13 @@ private struct PaperKitPDFPageContainer: UIViewControllerRepresentable {
 
 @available(iOS 26.0, *)
 @MainActor
-final class PaperKitPDFViewportObserver:
-    NSObject, @preconcurrency PaperMarkupViewController.Delegate {
-    var onVisibleFrameChange: ((PaperMarkupViewController) -> Void)?
-
-    func paperMarkupViewControllerDidChangeContentVisibleFrame(
-        _ paperMarkupViewController: PaperMarkupViewController
-    ) {
-        onVisibleFrameChange?(paperMarkupViewController)
-    }
-}
-
-@available(iOS 26.0, *)
-@MainActor
 private final class PaperKitPDFPageViewController: UIViewController {
     /// Matching the coordinate density of the physically accepted 0.1.4
     /// standalone canvas makes system tool widths useful on PDF-sized pages.
     private static let logicalPageScale: CGFloat = 2
+    /// About one display frame at 30 Hz. This samples for viewport changes; it
+    /// is not a post-gesture debounce and never delays a detected render.
+    private static let viewportSampleNanoseconds: UInt64 = 33_000_000
 
     private let documentID: String
     private let pageIndex: Int
@@ -381,7 +371,8 @@ private final class PaperKitPDFPageViewController: UIViewController {
     private let paperController: PaperMarkupViewController
     private let backgroundView: PaperKitPDFPageBackgroundView
     private let toolPicker: PKToolPicker
-    private let viewportObserver = PaperKitPDFViewportObserver()
+    private var viewportMonitoringTask: Task<Void, Never>?
+    private var lastObservedVisibleFrame = CGRect.null
 
     init(
         page: PDFPage,
@@ -462,17 +453,15 @@ private final class PaperKitPDFPageViewController: UIViewController {
         toolPicker.addObserver(paperController)
         paperController.pencilKitResponderState.activeToolPicker = toolPicker
         paperController.pencilKitResponderState.toolPickerVisibility = .visible
-        viewportObserver.onVisibleFrameChange = { [weak self] _ in
-            self?.requestCurrentViewportDetail()
-        }
-        paperController.delegate = viewportObserver
 
         backgroundView.onStatusChange = { [weak self] message, isError in
             self?.proxy?.statusMessage = message
             self?.proxy?.statusIsError = isError
         }
         backgroundView.onBaseImageReady = { [weak self] in
-            self?.requestCurrentViewportDetail()
+            guard let self else { return }
+            self.lastObservedVisibleFrame = .null
+            self.sampleViewport()
         }
         backgroundView.prepareBaseImage()
 
@@ -500,7 +489,12 @@ private final class PaperKitPDFPageViewController: UIViewController {
         paperController.pencilKitResponderState.activeToolPicker = toolPicker
         paperController.pencilKitResponderState.toolPickerVisibility = .visible
         paperController.becomeFirstResponder()
-        requestCurrentViewportDetail()
+        startViewportMonitoring()
+    }
+
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        stopViewportMonitoring()
     }
 
     @objc
@@ -533,10 +527,36 @@ private final class PaperKitPDFPageViewController: UIViewController {
         }
     }
 
-    private func requestCurrentViewportDetail() {
+    private func startViewportMonitoring() {
+        guard viewportMonitoringTask == nil else { return }
+        sampleViewport()
+
+        viewportMonitoringTask = Task { @MainActor [weak self] in
+            while !Task.isCancelled {
+                if let self {
+                    self.sampleViewport()
+                } else {
+                    return
+                }
+                try? await Task.sleep(nanoseconds: Self.viewportSampleNanoseconds)
+            }
+        }
+    }
+
+    private func stopViewportMonitoring() {
+        viewportMonitoringTask?.cancel()
+        viewportMonitoringTask = nil
+    }
+
+    private func sampleViewport() {
         let visibleFrame = paperController.contentVisibleFrame.standardized
             .intersection(backgroundView.bounds)
         guard visibleFrame.isUsableViewport else { return }
+
+        guard !visibleFrame.isApproximatelyEqual(to: lastObservedVisibleFrame) else {
+            return
+        }
+        lastObservedVisibleFrame = visibleFrame
 
         backgroundView.requestDetailImage(
             for: visibleFrame,
@@ -820,6 +840,14 @@ final class PaperKitPDFPageRasterizer: @unchecked Sendable {
 private extension CGRect {
     var isUsableViewport: Bool {
         !isNull && !isInfinite && width.isFinite && height.isFinite && width > 1 && height > 1
+    }
+
+    func isApproximatelyEqual(to other: CGRect, tolerance: CGFloat = 0.75) -> Bool {
+        guard isUsableViewport, other.isUsableViewport else { return false }
+        return abs(minX - other.minX) <= tolerance
+            && abs(minY - other.minY) <= tolerance
+            && abs(width - other.width) <= tolerance
+            && abs(height - other.height) <= tolerance
     }
 }
 #endif

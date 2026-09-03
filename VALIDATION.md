@@ -18,6 +18,23 @@
 Do not mark the MVP complete until the native Pencil input path and the
 remaining acceptance checks pass in Swift Playgrounds on the target iPad.
 
+## Swift Playgrounds viewport compatibility: 0.1.16
+
+- Date: 2026-09-03
+- Physical-device compiler result for 0.1.15: failed before launch with the same
+  `PaperKitPDFViewportObserver` protocol-conformance error; `@preconcurrency`
+  did not make the iPad Swift Playgrounds SDK accept the conformance
+- Compatibility decision: remove
+  `PaperMarkupViewController.Delegate` from this diagnostic entirely
+- Viewport monitoring: main-actor task samples `contentVisibleFrame` about every
+  33 milliseconds and immediately submits a changed frame
+- Fixed post-gesture delay: none; the former 0.3-second debounce remains removed
+- Render-work bound: unchanged at one active render and one replaceable latest
+  pending request
+- Windows repository validation: pending
+- Apple toolchain validation: pending
+- Physical iPadOS 26 acceptance: pending
+
 ## Swift Playgrounds delegate compatibility: 0.1.15
 
 - Date: 2026-09-03
@@ -45,7 +62,9 @@ remaining acceptance checks pass in Swift Playgrounds on the target iPad.
 - Xcode 16.4 fallback build and iPad Simulator tests: passed
 - Xcode 26 normal build, strict Swift 6 concurrency build, and iPad Simulator
   tests: passed
-- Physical iPadOS 26 acceptance: pending
+- Physical iPadOS 26 result: failed before launch; Swift Playgrounds continued
+  to reject `PaperKitPDFViewportObserver` as
+  `PaperMarkupViewController.Delegate`
 
 ## Immediate adaptive detail candidate: 0.1.14
 

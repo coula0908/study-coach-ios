@@ -92,8 +92,8 @@ if ($rootView.Contains('StudyCoachPaperKitDiagnosticView')) {
     throw 'StudyCoachRootView must not route production users into the PaperKit diagnostic.'
 }
 
-if (-not $versionDocument.Contains('Current package version: `0.1.15`')) {
-    throw 'VERSION.md must identify the source tree as package version 0.1.15.'
+if (-not $versionDocument.Contains('Current package version: `0.1.16`')) {
+    throw 'VERSION.md must identify the source tree as package version 0.1.16.'
 }
 
 if ($rootView.Contains('StudyCoachPaperKitPDFDiagnosticView')) {
@@ -108,9 +108,8 @@ foreach ($requiredPaperKitPDFText in @(
     'baseImageView'
     'detailImageView'
     'contentVisibleFrame'
-    'PaperKitPDFViewportObserver'
-    '@preconcurrency PaperMarkupViewController.Delegate'
-    'paperMarkupViewControllerDidChangeContentVisibleFrame'
+    'viewportMonitoringTask'
+    'viewportSampleNanoseconds: UInt64 = 33_000_000'
     'detailRenderIsInFlight'
     'pendingDetailRequest'
     'logicalPageScale: CGFloat = 2'
@@ -132,6 +131,7 @@ foreach ($removedViewportDelayText in @(
     'viewportSettleDelay'
     'pendingViewportTask'
     'Timer(timeInterval:'
+    'PaperMarkupViewController.Delegate'
 )) {
     if ($paperKitPDFDiagnostic.Contains($removedViewportDelayText)) {
         throw "The adaptive PaperKit PDF diagnostic still contains a fixed viewport delay mechanism: $removedViewportDelayText"

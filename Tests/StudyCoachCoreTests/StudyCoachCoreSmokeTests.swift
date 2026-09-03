@@ -28,12 +28,8 @@ final class StudyCoachCoreSmokeTests: XCTestCase {
             markup: markup,
             supportedFeatureSet: .latest
         )
-        let viewportObserver = PaperKitPDFViewportObserver()
-        controller.delegate = viewportObserver
-
         XCTAssertNotNil(controller.markup)
         XCTAssertEqual(controller.supportedFeatureSet, .latest)
-        XCTAssertTrue(controller.delegate === viewportObserver)
     }
 
     @available(iOS 26.0, *)

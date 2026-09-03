@@ -1,5 +1,17 @@
 # Changelog
 
+## 0.1.16 — Swift Playgrounds viewport compatibility
+
+- Remove the `PaperMarkupViewController.Delegate` conformance because the
+  physical iPad Swift Playgrounds SDK rejects it even though Xcode 26 accepts
+  the same source.
+- Restore viewport sampling through a main-actor task, using an approximately
+  33-millisecond interval only to detect changes and no post-gesture debounce.
+- Start high-resolution rendering immediately when a changed frame is detected,
+  while retaining the one-active plus one-latest-pending work bound from
+  `0.1.14`.
+- Preserve the removal of the former fixed 0.3-second delay.
+
 ## 0.1.15 — Swift Playgrounds delegate compatibility
 
 - Mark the main-actor PaperKit viewport delegate conformance as
