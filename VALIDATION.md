@@ -32,6 +32,9 @@ remaining acceptance checks pass in Swift Playgrounds on the target iPad.
 - First strict-build follow-up: the viewport delegate error no longer appeared;
   the build instead exposed an existing UIKit default-value isolation error in
   `PencilPageInkPresentation`, which is now explicitly `@MainActor`
+- Second strict-build follow-up: remove the non-Sendable notification token
+  from controller deinitialization, isolate PencilKit tool mutation to the main
+  actor, and capture immutable raster limits before background queue work
 - Windows repository validation: pending
 - Apple toolchain validation: pending
 - Physical iPadOS 26 acceptance: pending

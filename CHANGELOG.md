@@ -14,6 +14,9 @@
 - Explicitly isolate the UIKit-only `PencilPageInkPresentation` helper to the
   main actor after the new strict build exposed its previously implicit UI
   isolation requirement.
+- Keep tool application on the main actor, replace the non-Sendable block
+  notification token with UIKit's selector observer, and capture raster limits
+  before entering background rendering closures for Swift 6 safety.
 
 ## 0.1.14 — Immediate adaptive PDF detail rendering
 

@@ -46,6 +46,7 @@ struct AnnotationToolConfiguration {
     let width: CGFloat
     let eraserMode: AnnotationEraserMode
 
+    @MainActor
     func apply(to canvas: PencilPageCanvasView) {
         switch tool {
         case .pen:

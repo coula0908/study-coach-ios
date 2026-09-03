@@ -382,7 +382,6 @@ private final class PaperKitPDFPageViewController: UIViewController {
     private let backgroundView: PaperKitPDFPageBackgroundView
     private let toolPicker: PKToolPicker
     private let viewportObserver = PaperKitPDFViewportObserver()
-    private var backgroundObserver: NSObjectProtocol?
 
     init(
         page: PDFPage,
@@ -488,15 +487,12 @@ private final class PaperKitPDFPageViewController: UIViewController {
         ])
         paperController.didMove(toParent: self)
 
-        backgroundObserver = NotificationCenter.default.addObserver(
-            forName: UIApplication.didEnterBackgroundNotification,
-            object: nil,
-            queue: .main
-        ) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                self?.saveMarkup()
-            }
-        }
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(applicationDidEnterBackground),
+            name: UIApplication.didEnterBackgroundNotification,
+            object: nil
+        )
     }
 
     override func viewDidAppear(_ animated: Bool) {
@@ -507,10 +503,9 @@ private final class PaperKitPDFPageViewController: UIViewController {
         requestCurrentViewportDetail()
     }
 
-    deinit {
-        if let backgroundObserver {
-            NotificationCenter.default.removeObserver(backgroundObserver)
-        }
+    @objc
+    private func applicationDidEnterBackground() {
+        saveMarkup()
     }
 
     func saveMarkup() {
@@ -630,12 +625,14 @@ private final class PaperKitPDFPageBackgroundView: UIView {
 
         let rasterizer = rasterizer
         let pixelsPerLogicalPoint = Self.basePixelsPerPDFPoint / logicalScale
+        let maximumPixelDimension = Self.maximumPixelDimension
+        let maximumPixelCount = Self.maximumPixelCount
         Self.renderQueue.async { [weak self] in
             let image = rasterizer.render(
                 logicalRect: rasterizer.logicalBounds,
                 pixelsPerLogicalPoint: pixelsPerLogicalPoint,
-                maximumPixelDimension: Self.maximumPixelDimension,
-                maximumPixelCount: Self.maximumPixelCount
+                maximumPixelDimension: maximumPixelDimension,
+                maximumPixelCount: maximumPixelCount
             )
             DispatchQueue.main.async {
                 guard let self else { return }
@@ -701,12 +698,14 @@ private final class PaperKitPDFPageBackgroundView: UIView {
         detailRenderIsInFlight = true
 
         let rasterizer = rasterizer
+        let maximumPixelDimension = Self.maximumPixelDimension
+        let maximumPixelCount = Self.maximumPixelCount
         Self.renderQueue.async { [weak self] in
             let image = rasterizer.render(
                 logicalRect: request.rect,
                 pixelsPerLogicalPoint: request.pixelsPerLogicalPoint,
-                maximumPixelDimension: Self.maximumPixelDimension,
-                maximumPixelCount: Self.maximumPixelCount
+                maximumPixelDimension: maximumPixelDimension,
+                maximumPixelCount: maximumPixelCount
             )
             DispatchQueue.main.async {
                 guard let self else { return }
