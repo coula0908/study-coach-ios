@@ -38,8 +38,13 @@ remaining acceptance checks pass in Swift Playgrounds on the target iPad.
 - Third strict-build follow-up: application sources passed; update the storage
   test fixture so it transfers a fresh `UserDefaults` instance into the store
   actor instead of retaining the same non-Sendable reference on both sides
-- Windows repository validation: pending
-- Apple toolchain validation: pending
+- Windows repository validation: passed (`scripts/validate-repository.ps1` and
+  `git diff --check` on 2026-09-03)
+- Apple validation commit: `da7b228051387f6bb32b7c95cec674ae7c91b9fe`
+- Workflow run: <https://github.com/coula0908/study-coach-ios/actions/runs/33725498818>
+- Xcode 16.4 fallback build and iPad Simulator tests: passed
+- Xcode 26 normal build, strict Swift 6 concurrency build, and iPad Simulator
+  tests: passed
 - Physical iPadOS 26 acceptance: pending
 
 ## Immediate adaptive detail candidate: 0.1.14
