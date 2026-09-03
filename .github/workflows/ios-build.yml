@@ -37,15 +37,30 @@ jobs:
 
       - name: Compile PaperKit path with Swift 6 strict concurrency
         if: matrix.runner == 'macos-26'
-        run: >-
-          xcodebuild
-          build-for-testing
-          -scheme StudyCoachCore
-          -destination 'generic/platform=iOS Simulator'
-          -skipPackagePluginValidation
-          CODE_SIGNING_ALLOWED=NO
-          SWIFT_VERSION=6
-          SWIFT_STRICT_CONCURRENCY=complete
+        shell: bash
+        run: |
+          set -o pipefail
+          LOG_FILE="$RUNNER_TEMP/studycoach-swift6-build.log"
+          if xcodebuild \
+            build-for-testing \
+            -scheme StudyCoachCore \
+            -destination 'generic/platform=iOS Simulator' \
+            -skipPackagePluginValidation \
+            CODE_SIGNING_ALLOWED=NO \
+            SWIFT_VERSION=6 \
+            SWIFT_STRICT_CONCURRENCY=complete \
+            >"$LOG_FILE" 2>&1; then
+            cat "$LOG_FILE"
+          else
+            while IFS= read -r diagnostic; do
+              escaped="${diagnostic//'%'/'%25'}"
+              escaped="${escaped//$'\r'/'%0D'}"
+              escaped="${escaped//$'\n'/'%0A'}"
+              echo "::error title=Swift 6 compile::$escaped"
+            done < <(grep -E 'error:|warning:' "$LOG_FILE" | tail -40)
+            cat "$LOG_FILE"
+            exit 1
+          fi
 
       - name: Run unit tests on an iPad Simulator
         shell: bash
