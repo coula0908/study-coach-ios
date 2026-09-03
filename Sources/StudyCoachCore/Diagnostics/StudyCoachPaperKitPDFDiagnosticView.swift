@@ -14,8 +14,8 @@ import UniformTypeIdentifiers
 ///
 /// PDFView is intentionally absent. PaperKit owns scrolling, zooming, tools,
 /// and Pencil input. A complete base image prevents tile-shaped page loading;
-/// after navigation settles, the visible region is rerendered atomically from
-/// the original PDF at the device's presentation resolution.
+/// visible-frame changes immediately request an atomic rerender from the
+/// original PDF at the device's presentation resolution.
 ///
 /// The production `StudyCoachRootView` and its PencilKit overlays are not used
 /// or modified by this diagnostic.
@@ -357,11 +357,22 @@ private struct PaperKitPDFPageContainer: UIViewControllerRepresentable {
 
 @available(iOS 26.0, *)
 @MainActor
+final class PaperKitPDFViewportObserver: NSObject, PaperMarkupViewController.Delegate {
+    var onVisibleFrameChange: ((PaperMarkupViewController) -> Void)?
+
+    func paperMarkupViewControllerDidChangeContentVisibleFrame(
+        _ paperMarkupViewController: PaperMarkupViewController
+    ) {
+        onVisibleFrameChange?(paperMarkupViewController)
+    }
+}
+
+@available(iOS 26.0, *)
+@MainActor
 private final class PaperKitPDFPageViewController: UIViewController {
     /// Matching the coordinate density of the physically accepted 0.1.4
     /// standalone canvas makes system tool widths useful on PDF-sized pages.
     private static let logicalPageScale: CGFloat = 2
-    private static let viewportSettleDelay: TimeInterval = 0.3
 
     private let documentID: String
     private let pageIndex: Int
@@ -369,10 +380,8 @@ private final class PaperKitPDFPageViewController: UIViewController {
     private let paperController: PaperMarkupViewController
     private let backgroundView: PaperKitPDFPageBackgroundView
     private let toolPicker: PKToolPicker
+    private let viewportObserver = PaperKitPDFViewportObserver()
     private var backgroundObserver: NSObjectProtocol?
-    private var viewportTimer: Timer?
-    private var pendingViewportTask: Task<Void, Never>?
-    private var lastObservedVisibleFrame = CGRect.null
 
     init(
         page: PDFPage,
@@ -453,15 +462,17 @@ private final class PaperKitPDFPageViewController: UIViewController {
         toolPicker.addObserver(paperController)
         paperController.pencilKitResponderState.activeToolPicker = toolPicker
         paperController.pencilKitResponderState.toolPickerVisibility = .visible
+        viewportObserver.onVisibleFrameChange = { [weak self] _ in
+            self?.requestCurrentViewportDetail()
+        }
+        paperController.delegate = viewportObserver
 
         backgroundView.onStatusChange = { [weak self] message, isError in
             self?.proxy?.statusMessage = message
             self?.proxy?.statusIsError = isError
         }
         backgroundView.onBaseImageReady = { [weak self] in
-            guard let self else { return }
-            self.lastObservedVisibleFrame = .null
-            self.sampleViewport()
+            self?.requestCurrentViewportDetail()
         }
         backgroundView.prepareBaseImage()
 
@@ -492,17 +503,10 @@ private final class PaperKitPDFPageViewController: UIViewController {
         paperController.pencilKitResponderState.activeToolPicker = toolPicker
         paperController.pencilKitResponderState.toolPickerVisibility = .visible
         paperController.becomeFirstResponder()
-        startViewportMonitoring()
-    }
-
-    override func viewWillDisappear(_ animated: Bool) {
-        super.viewWillDisappear(animated)
-        stopViewportMonitoring()
+        requestCurrentViewportDetail()
     }
 
     deinit {
-        viewportTimer?.invalidate()
-        pendingViewportTask?.cancel()
         if let backgroundObserver {
             NotificationCenter.default.removeObserver(backgroundObserver)
         }
@@ -533,60 +537,26 @@ private final class PaperKitPDFPageViewController: UIViewController {
         }
     }
 
-    private func startViewportMonitoring() {
-        guard viewportTimer == nil else { return }
-        sampleViewport()
-
-        let timer = Timer(timeInterval: 0.1, repeats: true) { [weak self] _ in
-            Task { @MainActor [weak self] in
-                self?.sampleViewport()
-            }
-        }
-        RunLoop.main.add(timer, forMode: .common)
-        viewportTimer = timer
-    }
-
-    private func stopViewportMonitoring() {
-        viewportTimer?.invalidate()
-        viewportTimer = nil
-        pendingViewportTask?.cancel()
-        pendingViewportTask = nil
-    }
-
-    private func sampleViewport() {
+    private func requestCurrentViewportDetail() {
         let visibleFrame = paperController.contentVisibleFrame.standardized
             .intersection(backgroundView.bounds)
         guard visibleFrame.isUsableViewport else { return }
 
-        guard !visibleFrame.isApproximatelyEqual(to: lastObservedVisibleFrame) else {
-            return
-        }
-
-        lastObservedVisibleFrame = visibleFrame
-        backgroundView.viewportWillChange()
-        pendingViewportTask?.cancel()
-
-        let expectedFrame = visibleFrame
-        pendingViewportTask = Task { @MainActor [weak self] in
-            try? await Task.sleep(
-                nanoseconds: UInt64(Self.viewportSettleDelay * 1_000_000_000)
-            )
-            guard !Task.isCancelled, let self else { return }
-            let currentFrame = self.paperController.contentVisibleFrame.standardized
-                .intersection(self.backgroundView.bounds)
-            guard currentFrame.isUsableViewport,
-                  currentFrame.isApproximatelyEqual(to: expectedFrame) else { return }
-
-            self.backgroundView.prepareDetailImage(
-                for: currentFrame,
-                viewportSize: self.paperController.view.bounds.size
-            )
-        }
+        backgroundView.requestDetailImage(
+            for: visibleFrame,
+            viewportSize: paperController.view.bounds.size
+        )
     }
 }
 
 @available(iOS 26.0, *)
 private final class PaperKitPDFPageBackgroundView: UIView {
+    private struct DetailRenderRequest {
+        let generation: Int
+        let rect: CGRect
+        let pixelsPerLogicalPoint: CGFloat
+    }
+
     private static let renderQueue = DispatchQueue(
         label: "com.studycoach.paperkit.pdf-rendering",
         qos: .userInitiated
@@ -606,6 +576,8 @@ private final class PaperKitPDFPageBackgroundView: UIView {
     private let detailImageView = UIImageView()
     private let activityIndicator = UIActivityIndicatorView(style: .medium)
     private var detailRenderGeneration = 0
+    private var detailRenderIsInFlight = false
+    private var pendingDetailRequest: DetailRenderRequest?
     private var baseRenderStarted = false
     private var baseImageIsReady = false
 
@@ -675,7 +647,7 @@ private final class PaperKitPDFPageBackgroundView: UIView {
                 self.baseImageView.image = image
                 self.baseImageIsReady = true
                 self.onStatusChange?(
-                    "전체 페이지 준비 완료 · 확대를 멈추면 보이는 영역이 다시 선명해집니다.",
+                    "전체 페이지 준비 완료 · 확대 영역은 즉시 고해상도로 갱신됩니다.",
                     false
                 )
                 self.onBaseImageReady?()
@@ -683,13 +655,11 @@ private final class PaperKitPDFPageBackgroundView: UIView {
         }
     }
 
-    func viewportWillChange() {
+    func requestDetailImage(for visibleFrame: CGRect, viewportSize: CGSize) {
         detailRenderGeneration += 1
+        pendingDetailRequest = nil
         detailImageView.isHidden = true
         detailImageView.image = nil
-    }
-
-    func prepareDetailImage(for visibleFrame: CGRect, viewportSize: CGSize) {
         guard baseImageIsReady,
               visibleFrame.isUsableViewport,
               viewportSize.width > 0,
@@ -716,35 +686,52 @@ private final class PaperKitPDFPageBackgroundView: UIView {
         guard detailRect.isUsableViewport else { return }
 
         onStatusChange?("확대 영역을 원본 PDF에서 선명하게 만드는 중…", false)
-        let generation = nextDetailRenderGeneration()
+        pendingDetailRequest = DetailRenderRequest(
+            generation: detailRenderGeneration,
+            rect: detailRect,
+            pixelsPerLogicalPoint: desiredPixelsPerLogicalPoint
+        )
+        startNextDetailRenderIfNeeded()
+    }
+
+    private func startNextDetailRenderIfNeeded() {
+        guard !detailRenderIsInFlight, let request = pendingDetailRequest else { return }
+        pendingDetailRequest = nil
+        detailRenderIsInFlight = true
+
         let rasterizer = rasterizer
         Self.renderQueue.async { [weak self] in
             let image = rasterizer.render(
-                logicalRect: detailRect,
-                pixelsPerLogicalPoint: desiredPixelsPerLogicalPoint,
+                logicalRect: request.rect,
+                pixelsPerLogicalPoint: request.pixelsPerLogicalPoint,
                 maximumPixelDimension: Self.maximumPixelDimension,
                 maximumPixelCount: Self.maximumPixelCount
             )
             DispatchQueue.main.async {
-                guard let self, generation == self.detailRenderGeneration else { return }
-                guard let image else {
-                    self.onStatusChange?("확대 영역 렌더링에 실패했습니다. 기본 페이지를 유지합니다.", true)
-                    return
+                guard let self else { return }
+                self.detailRenderIsInFlight = false
+
+                if request.generation == self.detailRenderGeneration {
+                    if let image {
+                        UIView.performWithoutAnimation {
+                            self.detailImageView.frame = request.rect
+                            self.detailImageView.image = image
+                            self.detailImageView.isHidden = false
+                        }
+                        self.onStatusChange?("확대 영역 고해상도 표시 완료", false)
+                    } else {
+                        self.onStatusChange?(
+                            "확대 영역 렌더링에 실패했습니다. 기본 페이지를 유지합니다.",
+                            true
+                        )
+                    }
                 }
 
-                UIView.performWithoutAnimation {
-                    self.detailImageView.frame = detailRect
-                    self.detailImageView.image = image
-                    self.detailImageView.isHidden = false
-                }
-                self.onStatusChange?("확대 영역 고해상도 표시 완료", false)
+                // A gesture can change the viewport many times while one render is
+                // running. Only the newest pending request is retained and starts now.
+                self.startNextDetailRenderIfNeeded()
             }
         }
-    }
-
-    private func nextDetailRenderGeneration() -> Int {
-        detailRenderGeneration += 1
-        return detailRenderGeneration
     }
 }
 
@@ -833,14 +820,6 @@ final class PaperKitPDFPageRasterizer: @unchecked Sendable {
 private extension CGRect {
     var isUsableViewport: Bool {
         !isNull && !isInfinite && width.isFinite && height.isFinite && width > 1 && height > 1
-    }
-
-    func isApproximatelyEqual(to other: CGRect, tolerance: CGFloat = 0.75) -> Bool {
-        guard isUsableViewport, other.isUsableViewport else { return false }
-        return abs(minX - other.minX) <= tolerance
-            && abs(minY - other.minY) <= tolerance
-            && abs(width - other.width) <= tolerance
-            && abs(height - other.height) <= tolerance
     }
 }
 #endif

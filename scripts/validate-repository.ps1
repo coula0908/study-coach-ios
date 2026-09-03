@@ -92,8 +92,8 @@ if ($rootView.Contains('StudyCoachPaperKitDiagnosticView')) {
     throw 'StudyCoachRootView must not route production users into the PaperKit diagnostic.'
 }
 
-if (-not $versionDocument.Contains('Current package version: `0.1.13`')) {
-    throw 'VERSION.md must identify the source tree as package version 0.1.13.'
+if (-not $versionDocument.Contains('Current package version: `0.1.14`')) {
+    throw 'VERSION.md must identify the source tree as package version 0.1.14.'
 }
 
 if ($rootView.Contains('StudyCoachPaperKitPDFDiagnosticView')) {
@@ -108,6 +108,10 @@ foreach ($requiredPaperKitPDFText in @(
     'baseImageView'
     'detailImageView'
     'contentVisibleFrame'
+    'PaperKitPDFViewportObserver'
+    'paperMarkupViewControllerDidChangeContentVisibleFrame'
+    'detailRenderIsInFlight'
+    'pendingDetailRequest'
     'logicalPageScale: CGFloat = 2'
     'basePixelsPerPDFPoint: CGFloat = 4'
     'PaperMarkup(dataRepresentation:'
@@ -121,6 +125,16 @@ foreach ($requiredPaperKitPDFText in @(
 
 if ($paperKitPDFDiagnostic.Contains('CATiledLayer')) {
     throw 'The adaptive PaperKit PDF diagnostic must not reveal asynchronous rectangular PDF tiles.'
+}
+
+foreach ($removedViewportDelayText in @(
+    'viewportSettleDelay'
+    'pendingViewportTask'
+    'Timer(timeInterval:'
+)) {
+    if ($paperKitPDFDiagnostic.Contains($removedViewportDelayText)) {
+        throw "The adaptive PaperKit PDF diagnostic still contains a fixed viewport delay mechanism: $removedViewportDelayText"
+    }
 }
 
 if ($paperKitDiagnostic.Contains('editor.delegate = paperController')) {

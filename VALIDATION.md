@@ -18,6 +18,21 @@
 Do not mark the MVP complete until the native Pencil input path and the
 remaining acceptance checks pass in Swift Playgrounds on the target iPad.
 
+## Immediate adaptive detail candidate: 0.1.14
+
+- Date: 2026-09-03
+- Fixed delay: removed; there is no 0.3-second settle sleep and no 0.1-second
+  polling timer
+- Viewport signal: official
+  `paperMarkupViewControllerDidChangeContentVisibleFrame(_:)` delegate callback
+- Work bound: at most one active detail render and one replaceable latest
+  request; stale completed images are discarded
+- Production entry point: unchanged `StudyCoachRootView()`; physical testing
+  continues through `StudyCoachPaperKitPDFDiagnosticView()`
+- Windows repository validation: pending
+- Apple toolchain validation: pending
+- Physical iPadOS 26 acceptance: pending
+
 ## Adaptive PaperKit PDF candidate: 0.1.13
 
 - Date: 2026-09-03
@@ -44,7 +59,15 @@ remaining acceptance checks pass in Swift Playgrounds on the target iPad.
 - Xcode 16.4 fallback build and iPad Simulator tests: passed
 - Xcode 26 PaperKit build and iPad Simulator tests: passed, including creation
   of a PDF fixture and execution of both full-page and visible-region rasterizers
-- Physical iPadOS 26 acceptance: pending
+- Physical iPadOS 26 result reported on 2026-09-03: the page appeared complete,
+  with no inversion, clipping, or stretching. The user marked checklist items
+  1 through 12 and 15 through 17 as passed.
+- Remaining physical issue: handwriting correction felt identical to the
+  earlier standalone PaperKit diagnostic; the PDF background design did not
+  improve it.
+- Remaining physical issue: the added thin pen did not appear. The visible
+  picker contained Apple's default tools, so the custom preset is not accepted
+  as working.
 
 ## Pencil-only and canvas-scaling A/B revision
 

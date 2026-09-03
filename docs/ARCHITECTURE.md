@@ -8,10 +8,10 @@ The standalone `StudyCoachPaperKitDiagnosticView` passed on the target iPadOS
 26 device. The first PDF diagnostic exposed avoidable custom-renderer costs:
 PDF tiles became visible while pages loaded, the minimum ink width was too
 large, and maximum-zoom input did not preserve the accepted handwriting feel.
-The `0.1.13` diagnostic keeps PaperKit as the sole interaction and markup owner,
+The `0.1.14` diagnostic keeps PaperKit as the sole interaction and markup owner,
 removes `PDFView`, doubles the logical page coordinates, displays a complete
-bounded PDF page image, and atomically replaces only the visible region after
-pan or pinch settles. It remains isolated until the physical iPad acceptance
+bounded PDF page image, and atomically replaces only the visible region as pan
+or pinch changes. It remains isolated until the physical iPad acceptance
 check passes; the existing production root stays recoverable and unchanged.
 
 The production viewer follows Apple's WWDC22 design: one `PDFView` owns PDF
@@ -112,11 +112,11 @@ production editor. It deliberately uses no `PDFView`:
 3. PaperKit's `contentView` is a page-sized image container below the markup.
 4. A complete four-pixels-per-PDF-point image appears atomically at page load,
    subject to a 4096-pixel side and 14-million-pixel allocation bound.
-5. The visible content frame is sampled without modifying PaperKit's gesture
-   recognizers. Once it stays stable for 0.3 seconds, the visible region plus
-   overscan is rerendered from the original PDF at device presentation density
-   and swapped atomically.
-6. Any in-flight detail result is discarded after another pan or zoom change;
+5. PaperKit's visible-frame delegate callback immediately requests the visible
+   region plus overscan from the original PDF at device presentation density.
+   There is no fixed settle delay or polling timer.
+6. One detail render may run while one replaceable latest request waits. Stale
+   results are discarded, so a gesture cannot build an unbounded work queue;
    the complete base page remains visible throughout.
 7. The PaperKit coordinate space is twice the PDF crop-box dimensions. PDF
    background transforms multiply PDF points by two; future PDF export divides

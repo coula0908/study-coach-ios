@@ -1,5 +1,18 @@
 # Changelog
 
+## 0.1.14 — Immediate adaptive PDF detail rendering
+
+- Remove the fixed 0.3-second settle delay and the 0.1-second viewport polling
+  timer from the adaptive PaperKit PDF diagnostic.
+- Observe PaperKit's official visible-frame delegate callback and request the
+  high-resolution PDF region as soon as the visible content frame changes.
+- Bound detail work to one active render and one replaceable pending request,
+  so repeated pan and pinch updates cannot build an unbounded rendering queue.
+- Keep only the latest pending viewport and discard completed images that no
+  longer match it.
+- Leave PaperKit handwriting correction and the system tool-picker contents
+  unchanged; those remain separate physical-device follow-ups.
+
 ## 0.1.13 — Adaptive PaperKit PDF diagnostic
 
 - Keep the accepted PaperKit writing, erasing, zoom, undo, persistence, and
