@@ -3,6 +3,7 @@ import UIKit
 /// Adds a noninteractive, zoom-aware ink display inside the native page canvas
 /// without wrapping it or adding a sibling to PDFKit's private page hierarchy.
 /// PDFKit still receives `PKCanvasView` itself as the complete page overlay.
+@MainActor
 final class PencilPageInkPresentation {
     private weak var canvasView: PencilPageCanvasView?
     private let drawingRenderView = PencilDrawingRenderView(frame: .zero)

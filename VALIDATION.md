@@ -29,6 +29,9 @@ remaining acceptance checks pass in Swift Playgrounds on the target iPad.
   the corresponding runtime isolation check
 - CI regression coverage: add an Xcode 26 build with `SWIFT_VERSION=6` and
   `SWIFT_STRICT_CONCURRENCY=complete`
+- First strict-build follow-up: the viewport delegate error no longer appeared;
+  the build instead exposed an existing UIKit default-value isolation error in
+  `PencilPageInkPresentation`, which is now explicitly `@MainActor`
 - Windows repository validation: pending
 - Apple toolchain validation: pending
 - Physical iPadOS 26 acceptance: pending

@@ -11,6 +11,9 @@
 - Add a strict Swift 6 concurrency build for the PaperKit path to the Xcode 26
   CI job so the package's default Swift 5 language mode cannot hide this class
   of device-side compiler error again.
+- Explicitly isolate the UIKit-only `PencilPageInkPresentation` helper to the
+  main actor after the new strict build exposed its previously implicit UI
+  isolation requirement.
 
 ## 0.1.14 — Immediate adaptive PDF detail rendering
 
