@@ -19,8 +19,9 @@
 - First-frame activation hotfix: `0.1.22` passed Windows validation and the
   full Apple CI matrix; physical Swift Playgrounds launch and all implemented
   toolbar functions passed, with slower launch time observed
-- Compact toolbox candidate: `0.1.23` passed Windows repository validation;
-  Apple CI and physical Swift Playgrounds acceptance are pending
+- Compact toolbox candidate: `0.1.23` passed Windows repository validation,
+  the full Apple CI matrix, and Simulator tests; physical Swift Playgrounds
+  acceptance is pending
 - Native PDFKit/PencilKit revision: Xcode 16.4 and Xcode 26.6 builds and iPad
   Simulator tests passed on 2026-09-02; the `0.1.7` physical iPadOS 26 retest
   confirmed the delegate crash is fixed and Apple Pencil writing works, but
@@ -56,7 +57,18 @@ remaining acceptance checks pass in Swift Playgrounds on the target iPad.
   and Notability's movable swipeable toolbox/style tray. No source or external
   package was copied.
 - Windows repository validation and `git diff --check`: passed
-- Apple toolchain compilation and Simulator tests: pending
+- Workflow run:
+  <https://github.com/coula0908/study-coach-ios/actions/runs/33913484653>
+- Xcode 16 fallback build and iPad Simulator tests: passed
+- Xcode 26 normal build, strict Swift 6 concurrency build, and iPad Simulator
+  tests: passed
+- CI compiler-boundary note: the first compact builder was accepted by normal
+  builds but exhausted the strict Swift 6 compile path without a source
+  diagnostic. Tool-specific controls are now divided at small `AnyView`
+  boundaries; the screen behavior is unchanged and the strict build passes.
+- CI infrastructure note: the strict Swift 6 step uses isolated DerivedData so
+  it does not reuse incompatible system PCM output from the preceding Swift 5
+  build.
 - Physical Swift Playgrounds layout, opacity, width, and regression checks:
   pending
 

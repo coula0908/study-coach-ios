@@ -35,8 +35,9 @@ old version and tag values.
 - Active local branch: `codex/paperkit-adaptive-background`
 - Remote development branch: `main`
 - Latest installable package tag: `0.1.22`
-- Latest runtime implementation commit: `e69031b` — first-frame-safe PaperKit
-  tool activation over the `0.1.21` note-app toolbar
+- Latest runtime implementation commit: `e73524d` — compact scrollable
+  PaperKit toolbox, marker opacity, wider ink presets, and bounded SwiftUI type
+  inference
 - Latest researched toolbar-design commit: `1a14d92` — StudyCoach-owned exact
   native tools, direct Pencil interactions, structured insertion, and feature
   capability boundaries
@@ -51,13 +52,13 @@ old version and tag values.
 - Production entry point: `StudyCoachRootView()`
 - Current isolated candidate entry point:
   `StudyCoachPaperKitPDFDiagnosticView()` on iPadOS 26 or later
-- Source version `0.1.21` replaces the isolated diagnostic's rough A/B toolbar
-  with a polished StudyCoach-owned tool UI in `4920205` plus the compile fix in
-  `32121e2`. GitHub Actions run `33886410022` passed the Xcode 16 fallback,
-  Xcode 26 normal, strict Swift 6, and both iPad Simulator jobs. Physical
-  Swift Playgrounds and Apple Pencil acceptance for `0.1.21` remain pending.
-  The user reports all numbered `0.1.20` physical checks 1 through 13 passed,
-  and the accepted `0.1.19` renderer remains unchanged.
+- Source version `0.1.23` keeps the accepted `0.1.22` PaperKit behavior and
+  replaces the tall labeled dock/context tray with a centered two-tier,
+  icon-first, horizontally scrollable toolbox. GitHub Actions run
+  `33913484653` passed Xcode 16 fallback, Xcode 26 normal, strict Swift 6, and
+  both iPad Simulator jobs. Physical toolbox-density, marker-opacity, width,
+  and regression acceptance remain pending. The accepted `0.1.19` renderer is
+  unchanged.
 
 ## In Progress
 
@@ -66,31 +67,17 @@ old version and tag values.
   first launch takes longer than before. The first-frame hotfix is therefore
   accepted for correctness; startup latency remains a measured follow-up, not
   a reason to change the accepted PaperKit renderer in this task.
-- `0.1.23` is now a toolbar-density refinement before PDF geometry work. Keep
-  the PaperKit editor, Pencil input, PDF renderer, tile cache, persistence, and
-  first-frame activation unchanged. Replace the tall labeled dock plus context
-  tray with a compact two-tier note-app layout: a narrow document row and one
-  horizontally scrollable, icon-first tool/style row. Add an exact marker
-  opacity value and widen the ten pen/marker width presets so adjacent levels
-  are visibly distinct. This is based on the public Goodnotes split toolbar /
-  active-tool menu and Notability movable swipeable toolbox/style-tray
-  patterns; no external code or package is copied.
-- Physical `0.1.21` launch failed before the first visible frame in Swift
-  Playgrounds with `Updating took more than 5 seconds`; the preview also stayed
-  black. The screenshot is a preview watchdog report, not a root-cause stack.
-  The leading code-level regression candidate is repeated/too-early
-  `PaperMarkupViewController.drawingTool` assignment through
-  `UIViewControllerRepresentable.updateUIViewController -> proxy.attach`.
-  The `0.1.22` candidate defers the initial tool assignment until after the
-  controller is on-screen and skips an identical already-applied palette state.
-  Apple CI passed; physical launch confirmation is the next action. The PDF
-  renderer, stored PDF, and PaperMarkup files are preserved.
-- `0.1.21` implementation and Apple CI are complete. It includes the polished
-  document bar/tool dock/context tray, exact 10-step ink and eraser widths,
-  editable quick colors, marker azimuth, three eraser modes, lasso, direct
-  Pencil double-tap/squeeze, PaperKit text boxes, and original-pixel image
-  insertion including large originals. The immediate next action is physical
-  Swift Playgrounds compilation and behavior testing on iPadOS 26.
+- `0.1.23` implementation and Apple CI are complete. The immediate next action
+  is physical Swift Playgrounds testing on iPadOS 26: confirm the two compact
+  rows leave substantially more PDF height, horizontal swiping reaches all
+  style controls, marker opacity keeps printed text readable, all ten pen and
+  marker widths are meaningfully distinct, and every previously accepted tool,
+  gesture, coordinate, renderer, save, and relaunch behavior still works.
+- The `0.1.21` black-screen regression is resolved by `0.1.22`: physical launch
+  and every implemented tool function passed. The user did observe a longer
+  launch time. Do not conflate that performance observation with the fixed
+  five-second preview watchdog failure; measure it separately before changing
+  first-frame behavior again.
 - `0.1.20` custom-toolbar bridge implementation, Apple CI, package tag, and
   physical Swift Playgrounds A/B checklist are complete. All numbered checks
   1 through 13 passed. Keep the accepted `0.1.19` renderer, PDF
