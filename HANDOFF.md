@@ -34,30 +34,29 @@ old version and tag values.
 - Repository: `https://github.com/coula0908/study-coach-ios`
 - Active local branch: `codex/paperkit-adaptive-background`
 - Remote development branch: `main`
-- Latest installable package tag: `0.1.19`
-- Latest runtime implementation commit: `ad6c460` — keep sharp PDF tiles
-  during fixed-scale pan
+- Latest installable package tag: `0.1.19` (the `0.1.20` tag is not created yet)
+- Latest runtime implementation commit: `9dfe5e5` — isolated custom-toolbar
+  bridge over the accepted PaperKit editor
 - `0.1.19` annotated tag target commit: `8ebf8bc` — Apple validation record
 - Package/module: `StudyCoachCore`
 - Production entry point: `StudyCoachRootView()`
 - Current isolated candidate entry point:
   `StudyCoachPaperKitPDFDiagnosticView()` on iPadOS 26 or later
-- Source version `0.1.19` is implemented in `ad6c460` and pushed to
-  `origin/main`.
-  GitHub Actions run `33859079628` passed the Xcode 16.4 fallback build,
-  Xcode 26 normal build, strict Swift 6 build, and iPad Simulator tests.
-  Annotated tag `0.1.19` is pushed. On the physical iPadOS 26 device, the user
-  reports that PDF sharpening is somewhat slower than Notability but remains
-  usable and explicitly accepted moving past renderer work. This accepts the
-  renderer only, not the complete editor feature set.
+- Source version `0.1.20` adds the isolated StudyCoach/Apple toolbar A/B bridge
+  in `9dfe5e5` and is pushed to `origin/main`. GitHub Actions run `33879002800`
+  passed the Xcode 16 fallback build, Xcode 26 normal build, strict Swift 6
+  build, and both iPad Simulator jobs. The `0.1.20` documentation/tag commit
+  and physical iPadOS 26 test are still pending. The accepted `0.1.19`
+  renderer and its slower-than-Notability tradeoff are unchanged.
 
 ## In Progress
 
-- `0.1.20` implementation has started as the isolated custom-toolbar bridge
-  milestone. Its allowed scope is the PaperKit PDF diagnostic UI, a small pure
-  tool-selection state model, and focused tests. Keep the accepted `0.1.19`
-  renderer, PDF geometry, PaperMarkup storage format, gesture observation, and
-  production `StudyCoachRootView()` unchanged. The required experiment keeps
+- `0.1.20` custom-toolbar bridge implementation and Apple CI are complete;
+  source/version documentation is being finalized before the installable tag
+  is created. Physical Swift Playgrounds compilation and the A/B checklist are
+  not yet complete. Keep the accepted `0.1.19` renderer, PDF geometry,
+  PaperMarkup storage format, gesture observation, and production
+  `StudyCoachRootView()` unchanged. The experiment keeps
   `PKToolPicker` active while switching its responder visibility between
   `.hidden` and `.visible`, following Apple's documented PaperKit pattern, so
   Pencil double tap and squeeze can continue to use the system picker state.

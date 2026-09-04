@@ -1,11 +1,11 @@
 # 자체 툴바 상태 구조 초안
 
-상태: **미승인 초안**  
+상태: **`0.1.20` 최소 연결층 구현, 물리 기기 검증 대기**
 작성일: 2026-09-04
 
-이 문서는 다음 설계 턴에서 검토하기 위한 작업 초안이다. 사용자의
-승인을 받은 최종 설계가 아니며, 검토 전에는 구현 근거나 버전 계획으로
-사용하지 않는다.
+최소 연결층의 경계는 `0.1.20`에서 구현됐다. 여러 프리셋, 세부 지우개,
+툴바 배치와 나머지 `0.1.21` 항목은 아직 설계 초안이며 `0.1.20` 물리
+기기 합격 전에는 구현하지 않는다.
 
 ## 목표 경계
 
@@ -164,4 +164,3 @@ struct ToolPalettePreferences: Codable, Equatable, Sendable {
 - [Apple: Configuring the PencilKit tool picker](https://developer.apple.com/documentation/pencilkit/configuring-the-pencilkit-tool-picker)
 - [Goodnotes: Customize the toolbar](https://support.goodnotes.com/hc/en-us/articles/8900755183631-Customize-the-toolbar)
 - [Notability: Customize your Toolbox](https://support.gingerlabs.com/hc/en-us/articles/6272405402650-Customize-your-Toolbox)
-

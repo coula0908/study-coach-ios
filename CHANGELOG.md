@@ -1,5 +1,23 @@
 # Changelog
 
+## 0.1.20 — Isolated StudyCoach toolbar bridge
+
+- Keep `PaperMarkupViewController` and the accepted `0.1.19` PDF renderer,
+  viewport, page coordinates, gestures, and persistence format unchanged.
+- Add a minimal StudyCoach toolbar for pen, highlighter, eraser, undo, and
+  redo above the isolated PaperKit PDF editor.
+- Keep the configured `PKToolPicker` active while its system palette is hidden,
+  following Apple's PaperKit guidance so Pencil double tap and squeeze can
+  continue to participate in the system tool state.
+- Add an Apple/StudyCoach segmented control for immediate A/B testing and a
+  safe return to the visible system palette.
+- Synchronize app-selected tools into `PKToolPicker.selectedToolItem` and
+  reflect system selection changes back through `PKToolPickerObserver` without
+  constructing Pencil strokes or installing a competing gesture recognizer.
+- Preserve tool selection when PaperKit recreates the controller for a page.
+- Add focused tests for the default selection, app/system selection reflection,
+  and palette visibility independent of the selected tool.
+
 ## 0.1.19 — Stable high-resolution tiles during fixed-scale pan
 
 - Replace the single adaptive detail bitmap with a page-coordinate tile cache

@@ -93,8 +93,8 @@ if ($rootView.Contains('StudyCoachPaperKitDiagnosticView')) {
     throw 'StudyCoachRootView must not route production users into the PaperKit diagnostic.'
 }
 
-if (-not $versionDocument.Contains('Current package version: `0.1.19`')) {
-    throw 'VERSION.md must identify the source tree as package version 0.1.19.'
+if (-not $versionDocument.Contains('Current package version: `0.1.20`')) {
+    throw 'VERSION.md must identify the source tree as package version 0.1.20.'
 }
 
 if ($rootView.Contains('StudyCoachPaperKitPDFDiagnosticView')) {

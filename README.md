@@ -6,12 +6,13 @@ The first MVP focuses only on a stable PDF and Apple Pencil workflow. AI coachin
 
 ## Current stage
 
-The first PDF-and-Pencil MVP is implemented. The current development branch
-returns to Apple's native PDFKit/PencilKit overlay design, passes Xcode 16.4
-and Xcode 26.6 CI, and awaits physical iPadOS 26 verification. Earlier `0.1.2` device testing proved that
-a manual Pencil route can reach the overlay, while the PaperKit diagnostics
-proved good standalone ink quality but exposed unwanted PDF tile loading. The
-current implementation removes both custom paths from the production editor.
+The physically accepted editor candidate uses PaperKit for Pencil input,
+markup, scrolling, and zooming, with a complete PDF page fallback and bounded
+high-resolution PDF tiles behind the markup. Version `0.1.19` established an
+accepted rendering baseline. Version `0.1.20` adds an isolated StudyCoach
+toolbar bridge while keeping that renderer and PaperKit drawing engine
+unchanged. It awaits a physical iPadOS 26 A/B test against Apple's visible
+system palette.
 
 - Swift Package manifest and public `StudyCoachRootView`
 - Files-app PDF importer
@@ -30,16 +31,16 @@ current implementation removes both custom paths from the production editor.
   without changing the production PDF app
 - An opt-in `StudyCoachPaperKitPDFDiagnosticView` that tests a complete-page
   fallback plus cached high-resolution PDF tiles, page-local PaperMarkup, zoom
-  alignment, navigation, and restoration
+  alignment, navigation, restoration, and the isolated custom-toolbar bridge
 
-Runtime behavior still needs to be checked in Swift Playgrounds on the user's iPadOS 26 device. Until that pass is recorded, coordinate alignment and gesture behavior are implemented but not device-verified.
+The custom toolbar behavior still needs to be checked in Swift Playgrounds on
+the user's iPadOS 26 device. Apple CI does not establish physical Pencil feel,
+double-tap behavior, or the hidden-picker interaction.
 
-The production root view remains `StudyCoachRootView()`. Before committing to a
-new annotation engine, the separate PaperKit capability spike can be launched
-temporarily with `StudyCoachPaperKitDiagnosticView()`. See the complete
-[PaperKit diagnostic procedure](docs/PAPERKIT_DIAGNOSTIC.md). A successful
-standalone diagnostic does not by itself authorize PaperKit for PDFs. The next
-isolated step is the [PaperKit PDF-page procedure](docs/PAPERKIT_PDF_DIAGNOSTIC.md).
+The production root view remains `StudyCoachRootView()`. Physical testing of
+the accepted candidate and the `0.1.20` toolbar bridge continues through
+`StudyCoachPaperKitPDFDiagnosticView()` using the
+[PaperKit PDF-page procedure](docs/PAPERKIT_PDF_DIAGNOSTIC.md).
 
 ## Package structure
 

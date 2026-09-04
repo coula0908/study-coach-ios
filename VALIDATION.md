@@ -18,6 +18,35 @@
 Do not mark the MVP complete until the native Pencil input path and the
 remaining acceptance checks pass in Swift Playgrounds on the target iPad.
 
+## Isolated custom-toolbar bridge: 0.1.20
+
+- Date: 2026-09-04
+- Scope: minimal StudyCoach pen, highlighter, eraser, undo, and redo UI in
+  `StudyCoachPaperKitPDFDiagnosticView()` only
+- Unchanged: `PaperMarkupViewController`, PaperMarkup storage, logical page
+  scale, PDF base/tile renderer, viewport gestures, tile cache, and production
+  `StudyCoachRootView()`
+- System integration: `PKToolPicker` remains the active picker; StudyCoach mode
+  uses responder visibility `.hidden`, and Apple mode uses `.visible`
+- Selection integration: app buttons assign `selectedToolItem`; the picker
+  observer reflects Apple palette, Pencil double-tap, or squeeze selection
+  changes into the StudyCoach highlight when they map to pen, marker, or eraser
+- Fallback: a segmented StudyCoach/Apple control keeps the visible Apple picker
+  one tap away throughout the physical experiment
+- Pure-state tests: default pen/hidden palette, app/system selection reflection,
+  and palette visibility independent from tool selection added
+- Runtime implementation commit: `9dfe5e5628f65b53a2e8654a32e6d5608cd5b7c4`
+- Workflow run:
+  <https://github.com/coula0908/study-coach-ios/actions/runs/33879002800>
+- Xcode 16 fallback build and iPad Simulator tests: passed
+- Xcode 26 normal build, strict Swift 6 concurrency build, and iPad Simulator
+  tests: passed
+- Windows repository validation: passed
+- Physical Swift Playgrounds compilation and iPadOS 26 behavior: pending
+- Required physical evidence: the A/B checklist in
+  `docs/PAPERKIT_PDF_DIAGNOSTIC.md`; CI does not establish Pencil feel,
+  hidden-picker double tap, squeeze, or real toolbar usability
+
 ## Fixed-scale pan tile cache: 0.1.19
 
 - Date: 2026-09-04

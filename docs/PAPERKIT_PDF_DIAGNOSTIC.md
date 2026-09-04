@@ -31,10 +31,12 @@ struct ContentView: View {
 }
 ```
 
-Use the **PDF 열기** button to choose a study PDF. The system drawing tools
-remain at the bottom. The custom `도구 표시` button from the standalone spike
-is intentionally absent because it had no visible effect when the picker was
-already displayed.
+Use the **PDF 열기** button to choose a study PDF. The `0.1.20` test toolbar has
+a **StudyCoach / Apple** segmented control. StudyCoach mode keeps the system
+picker active but offscreen and exposes only pen, highlighter, eraser, undo,
+and redo. Apple mode shows the same active system picker for direct A/B
+comparison. The renderer and PaperMarkup controller are identical in both
+modes.
 
 ## Physical iPadOS 26 checklist
 
@@ -61,6 +63,26 @@ already displayed.
 16. Test the added thin pen and thin highlighter, Apple's default tools,
     eraser modes, undo/redo, Pencil double-tap, and line hold.
 17. Confirm the original `StudyCoachRootView()` still opens the existing app unchanged.
+
+## Version 0.1.20 custom-toolbar A/B checklist
+
+1. Start in **StudyCoach** mode and confirm the Apple palette is not persistently
+   visible.
+2. Write with the StudyCoach pen and highlighter and erase with the StudyCoach
+   eraser.
+3. Confirm undo and redo change the current page markup.
+4. Switch to **Apple** mode. Its palette should appear without recreating or
+   clearing the page.
+5. Choose pen, marker, and eraser in the Apple palette. The matching StudyCoach
+   button should follow the system selection.
+6. Switch back to **StudyCoach**. The Apple palette should move offscreen while
+   the selected tool continues working.
+7. Double-tap Apple Pencil while the picker is hidden. Confirm the system tool
+   changes and the StudyCoach selection highlight follows it.
+8. Compare the same strokes in both modes at normal and maximum zoom. There
+   must be no change in latency, pressure, correction, sharpness, or alignment.
+9. Confirm one-finger pan, two-finger pinch, page changes, save, and relaunch
+   still behave as in `0.1.19`.
 
 For a failure, capture the full screen at fit scale and high zoom, identify the
 page number, and state whether the problem affects the PDF background, the ink,
