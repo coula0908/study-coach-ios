@@ -43,6 +43,8 @@ old version and tag values.
 - `0.1.19` annotated tag target commit: `8ebf8bc` — Apple validation record
 - `0.1.20` annotated tag target commit: `13c0c20` — version record and
   physical-test instructions
+- `0.1.21` annotated tag target commit: `0a0cb53` — version record and
+  physical-test candidate
 - Package/module: `StudyCoachCore`
 - Production entry point: `StudyCoachRootView()`
 - Current isolated candidate entry point:
@@ -72,13 +74,12 @@ old version and tag values.
   `.hidden` and `.visible`, following Apple's documented PaperKit pattern, so
   Pencil double tap and squeeze can continue to use the system picker state.
 - The user rejected a cosmetic toolbar that merely mirrors Apple palette
-  choices. For `0.1.21`, `StudyCoachToolStore` must own exact native tool
-  values: 10-step/fine widths, per-tool quick colors, marker azimuth, three
-  eraser modes and widths, and lasso. Apply constructed `PKTool` values through
-  `PaperMarkupViewController.drawingTool`. Use `UIPencilInteraction` directly
-  for double tap and squeeze; do not keep a hidden Apple palette as the
-  production parameter or hardware-event authority. The `0.1.20` picker remains
-  only an isolated Apple/StudyCoach A/B fallback.
+  choices. `0.1.21` therefore owns exact native tool values: 10-step/fine
+  widths, per-tool quick colors, marker azimuth, three eraser modes and widths,
+  and lasso. Constructed `PKTool` values are applied through
+  `PaperMarkupViewController.drawingTool`, and `UIPencilInteraction` handles
+  double tap and squeeze directly. There is no hidden Apple palette in the
+  current PDF diagnostic; the `0.1.20` picker is historical A/B evidence only.
 - `docs/TOOLBAR_ARCHITECTURE.md` now records the researched capability split.
   Text and image use PaperKit structured insertion APIs rather than Apple UI.
   Freehand dashed/dotted ink has no public `PKInkingTool` pattern property and
