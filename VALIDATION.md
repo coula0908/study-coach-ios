@@ -30,8 +30,13 @@ remaining acceptance checks pass in Swift Playgrounds on the target iPad.
 - Compatibility fallback: the 33-millisecond main-actor sampler remains, but
   only records and invalidates detail while any observed pinch is active
 - Fixed post-gesture delay: none
-- Windows repository validation: pending
-- Apple toolchain validation: pending
+- Windows repository validation: passed (`scripts/validate-repository.ps1` and
+  `git diff --check`)
+- Apple validation commit: `3e54f39e517e8d5fc50dfaa697472e051e265974`
+- Workflow run: <https://github.com/coula0908/study-coach-ios/actions/runs/33854682210>
+- Xcode 16.4 fallback build and iPad Simulator tests: passed
+- Xcode 26 normal build, strict Swift 6 concurrency build, and iPad Simulator
+  tests: passed
 - Physical iPadOS 26 acceptance: pending
 
 ## Swift Playgrounds viewport compatibility: 0.1.16
