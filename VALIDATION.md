@@ -31,8 +31,13 @@ remaining acceptance checks pass in Swift Playgrounds on the target iPad.
 - Fixed post-gesture delay: none; the former 0.3-second debounce remains removed
 - Render-work bound: unchanged at one active render and one replaceable latest
   pending request
-- Windows repository validation: pending
-- Apple toolchain validation: pending
+- Windows repository validation: passed (`scripts/validate-repository.ps1` and
+  `git diff --check`)
+- Apple validation commit: `03feb6c097094ab15dd23b0eb8348ea18cb304db`
+- Workflow run: <https://github.com/coula0908/study-coach-ios/actions/runs/33726509583>
+- Xcode 16.4 fallback build and iPad Simulator tests: passed
+- Xcode 26 normal build, strict Swift 6 concurrency build, and iPad Simulator
+  tests: passed
 - Physical iPadOS 26 acceptance: pending
 
 ## Swift Playgrounds delegate compatibility: 0.1.15
