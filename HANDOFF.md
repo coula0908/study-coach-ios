@@ -61,6 +61,12 @@ old version and tag values.
   later turn. `docs/TOOLBAR_ARCHITECTURE.md` and
   `docs/PDF_PAGE_GEOMETRY.md` are retained only as explicitly marked,
   unapproved working drafts; do not implement from them before that review.
+- `docs/DEVELOPMENT_SEQUENCE.md` records the decided implementation order:
+  `0.1.20` minimal custom-tool bridge, `0.1.21` complete note-style toolbar,
+  `0.1.22` PDF geometry normalization, `0.1.23` autosave/recovery, and only
+  then `0.2.0` promotion into `StudyCoachRootView()`. Later phases add the
+  library/page model, editing/export, study/OCR, audio/sync, and AI. Keep one
+  risky subsystem per physical-device test version.
 - Renderer work is frozen at `0.1.19`: do not resume zoom/pan rendering
   optimization unless a new correctness, crash, or clearly unusable problem is
   reported. The accepted tradeoff is that sharpening is slower than Notability

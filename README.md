@@ -56,6 +56,7 @@ Tests/
   StudyCoachCoreTests/
 docs/
   ARCHITECTURE.md
+  DEVELOPMENT_SEQUENCE.md
   GOODNOTES_NOTABILITY_FEATURE_MATRIX.md
   PAPERKIT_DIAGNOSTIC.md
 AGENTS.md
@@ -115,6 +116,8 @@ The current Goodnotes/Notability feature baseline and the precise distinction
 between physical-device results, implemented-but-unverified behavior, partial
 support, and missing features are recorded in the
 [feature comparison matrix](docs/GOODNOTES_NOTABILITY_FEATURE_MATRIX.md).
+The isolated implementation order and physical-device gates are recorded in
+the [development sequence](docs/DEVELOPMENT_SEQUENCE.md).
 
 ## Host limitation
 
