@@ -34,21 +34,20 @@ old version and tag values.
 - Repository: `https://github.com/coula0908/study-coach-ios`
 - Active local branch: `codex/paperkit-adaptive-background`
 - Remote development branch: `main`
-- Latest device-test tag: `0.1.18`
+- Latest installable package tag: `0.1.19`
 - Latest runtime implementation commit: `ad6c460` — keep sharp PDF tiles
   during fixed-scale pan
-- `0.1.18` annotated tag target commit: `be7c890` — Apple validation record
+- `0.1.19` annotated tag target commit: `8ebf8bc` — Apple validation record
 - Package/module: `StudyCoachCore`
 - Production entry point: `StudyCoachRootView()`
 - Current isolated candidate entry point:
   `StudyCoachPaperKitPDFDiagnosticView()` on iPadOS 26 or later
-- `0.1.18` passed the Windows repository checks, Xcode 16.4 fallback build,
-  Xcode 26 build, strict Swift 6 build, and iPad Simulator tests. Its physical
-  iPadOS 26 interaction result is still pending.
-- Source version `0.1.19` is committed as `ad6c460` and pushed to `origin/main`.
+- Source version `0.1.19` is implemented in `ad6c460` and pushed to
+  `origin/main`.
   GitHub Actions run `33859079628` passed the Xcode 16.4 fallback build,
   Xcode 26 normal build, strict Swift 6 build, and iPad Simulator tests.
-  Physical iPadOS 26 interaction is still pending; no `0.1.19` tag exists yet.
+  Annotated tag `0.1.19` is pushed and physical iPadOS 26 interaction is still
+  pending.
 
 ## In Progress
 
@@ -67,7 +66,8 @@ old version and tag values.
   `ad6c460`. Windows `scripts/validate-repository.ps1` and `git diff --check`
   pass, and the commit is on `origin/main`. GitHub Actions run `33859079628`
   passed both Apple jobs, including strict Swift 6 and iPad Simulator tests.
-  The validation record is being finalized before creating the `0.1.19` tag.
+  Validation commit `8ebf8bc` and annotated tag `0.1.19` are on the remote.
+  The next required result is physical iPadOS 26 acceptance.
 
 ## Confirmed physical-device history
 
@@ -91,7 +91,7 @@ old version and tag values.
   user correctly identified that a sufficiently zoomed base image can be
   blurry and uncomfortable to read while moving.
 
-## Current design decision — implemented, awaiting Apple and device validation
+## Current design decision — implemented, awaiting device validation
 
 Zoom and pan require separate rendering policies:
 

@@ -45,6 +45,7 @@ remaining acceptance checks pass in Swift Playgrounds on the target iPad.
 - Xcode 26 normal build and strict Swift 6 concurrency build: passed
 - Xcode 26 iPad Simulator tests, including the new tile-planner coverage:
   passed
+- Apple validation record: `8ebf8bc`; annotated package tag `0.1.19` pushed
 - Physical Swift Playgrounds compilation: pending
 - Physical iPadOS 26 pan/zoom/ink acceptance: pending
 
