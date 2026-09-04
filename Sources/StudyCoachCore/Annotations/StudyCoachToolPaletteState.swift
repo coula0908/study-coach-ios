@@ -110,13 +110,13 @@ struct StudyCoachToolPaletteState: Codable, Equatable, Sendable {
 
     mutating func select(_ tool: StudyCoachPaletteTool) {
         guard selectedTool != tool else {
-            isContextPanelExpanded = true
+            isContextPanelExpanded.toggle()
             return
         }
         previousTool = selectedTool
         selectedTool = tool
         if tool.isInkingTool { lastInkingTool = tool }
-        isContextPanelExpanded = true
+        isContextPanelExpanded = tool != .lasso
     }
 
     mutating func toggleEraser() {
@@ -132,7 +132,7 @@ struct StudyCoachToolPaletteState: Codable, Equatable, Sendable {
         previousTool = selectedTool
         selectedTool = target
         if target.isInkingTool { lastInkingTool = target }
-        isContextPanelExpanded = true
+        isContextPanelExpanded = target != .lasso
     }
 
     mutating func setPenWidthLevel(_ level: Int) {

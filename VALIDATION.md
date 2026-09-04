@@ -20,8 +20,12 @@
   full Apple CI matrix; physical Swift Playgrounds launch and all implemented
   toolbar functions passed, with slower launch time observed
 - Compact toolbox candidate: `0.1.23` passed Windows repository validation,
-  the full Apple CI matrix, and Simulator tests; physical Swift Playgrounds
-  acceptance is pending
+  the full Apple CI matrix, and Simulator tests; physical use found hard-to-hit
+  width buttons, an ineffective 0-degree marker choice, and no useful visible
+  range for the whole-stroke eraser
+- Document-tab/context-row candidate: `0.1.24` preserves the accepted editor
+  and renderer while correcting the reported toolbar interaction defects;
+  Windows and Apple validation are pending
 - Native PDFKit/PencilKit revision: Xcode 16.4 and Xcode 26.6 builds and iPad
   Simulator tests passed on 2026-09-02; the `0.1.7` physical iPadOS 26 retest
   confirmed the delegate crash is fixed and Apple Pencil writing works, but
@@ -30,6 +34,37 @@
 
 Do not mark the MVP complete until the native Pencil input path and the
 remaining acceptance checks pass in Swift Playgrounds on the target iPad.
+
+## Document tabs and contextual tool controls: 0.1.24
+
+- Date: 2026-09-05
+- Physical input: the user confirmed `0.1.23` runs and its functions work, but
+  reported that the ten width buttons waste space and are hard to press, the
+  marker stays visibly at 45 degrees after choosing 0 degrees, and the
+  whole-stroke eraser shows no useful size/range cursor
+- Layout: persistent top document tabs, a centered six-icon primary tool row,
+  and a toggleable secondary settings row; document actions are no longer part
+  of the drawing-tool rows
+- Width control: one 180-point, ten-position slider plus the exact native width
+  number replaces the ten always-visible dots for every ink/eraser tool
+- Marker correction: create `PKInkingTool` with the selected `azimuth` in its
+  initializer, matching Apple's current public API
+- Eraser correction candidate: do not clamp `.vector` width through its own
+  range before construction; pass the selected nonzero size so PencilKit can
+  present/use the intended whole-stroke hit range
+- Multi-document memory boundary: persist document ID/name tabs, while keeping
+  only the active `PDFDocument` loaded
+- Research basis: Goodnotes documents an open-document tabs bar and an Active
+  Tool Menu, including second-tap access to the active tool's settings. Apple
+  documents exact marker azimuth construction, exact inking width, custom tool
+  ordering, fixed-width erasers, and hover-preview drawing. No source or
+  external dependency was copied.
+- Unchanged: Pencil/PaperKit input sampling and correction, PDF coordinates,
+  page rasterization and tile cache, first-frame activation, and stored
+  PaperMarkup data
+- Windows repository validation and `git diff --check`: passed
+- Apple CI and Simulator tests: pending
+- Physical Swift Playgrounds compilation and behavior: pending
 
 ## Compact scrollable toolbox and readable marker: 0.1.23
 

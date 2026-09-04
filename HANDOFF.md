@@ -54,27 +54,40 @@ old version and tag values.
 - Production entry point: `StudyCoachRootView()`
 - Current isolated candidate entry point:
   `StudyCoachPaperKitPDFDiagnosticView()` on iPadOS 26 or later
-- Source version `0.1.23` keeps the accepted `0.1.22` PaperKit behavior and
-  replaces the tall labeled dock/context tray with a centered two-tier,
-  icon-first, horizontally scrollable toolbox. GitHub Actions run
-  `33913484653` passed Xcode 16 fallback, Xcode 26 normal, strict Swift 6, and
-  both iPad Simulator jobs. Physical toolbox-density, marker-opacity, width,
-  and regression acceptance remain pending. The accepted `0.1.19` renderer is
-  unchanged.
+- Source version `0.1.24` keeps the accepted PaperKit editor/renderer and is an
+  working-tree toolbar correction candidate. It adds persistent top document
+  tabs, centered larger tool icons, a toggleable tool-settings row, width
+  sliders, explicit marker azimuth construction, and a nonzero vector-eraser
+  width. Windows validation passes; Apple CI, a package tag, and physical
+  iPadOS 26 acceptance are still pending. Latest installable tag remains
+  `0.1.23`.
 
 ## In Progress
 
+- `0.1.23` physical use confirmed that the compact controls still consume
+  space inefficiently and exposed three concrete defects: the ten separate
+  width targets are hard to tap, the marker's visible tip angle remains 45
+  degrees when 0 degrees is selected, and the whole-stroke eraser does not
+  show a useful size/range cursor. `0.1.24` is now an isolated toolbar-layout
+  correction: persistent top document tabs, a centered primary tool row, a
+  toggleable tool-specific secondary row, one usable width slider with a
+  numeric value, explicit marker construction with its selected azimuth, and
+  a nonzero vector-eraser width. The accepted PaperKit input engine, PDF
+  geometry, renderer/tile cache, and PaperMarkup format stay unchanged.
+- The `0.1.24` layout follows public Goodnotes behavior: open documents live
+  in a document-tabs bar and tapping an already-selected tool toggles its
+  active-tool settings. Apple's current PencilKit APIs explicitly support an
+  exact `PKInkingTool` azimuth and eraser-item width. No external code or
+  dependency is being copied.
 - Physical `0.1.22` launch now passes on iPadOS 26. The user verified every
   implemented tool function and reports that they work, while noting that the
   first launch takes longer than before. The first-frame hotfix is therefore
   accepted for correctness; startup latency remains a measured follow-up, not
   a reason to change the accepted PaperKit renderer in this task.
-- `0.1.23` implementation and Apple CI are complete. The immediate next action
-  is physical Swift Playgrounds testing on iPadOS 26: confirm the two compact
-  rows leave substantially more PDF height, horizontal swiping reaches all
-  style controls, marker opacity keeps printed text readable, all ten pen and
-  marker widths are meaningfully distinct, and every previously accepted tool,
-  gesture, coordinate, renderer, save, and relaunch behavior still works.
+- `0.1.23` implementation and Apple CI completed. Physical use confirmed the
+  functionality but rejected its ten always-visible width buttons and row
+  arrangement, and identified the marker-angle and whole-stroke-range issues.
+  `0.1.24` now supersedes it as the physical toolbar candidate.
 - The `0.1.21` black-screen regression is resolved by `0.1.22`: physical launch
   and every implemented tool function passed. The user did observe a longer
   launch time. Do not conflate that performance observation with the fixed
@@ -110,10 +123,14 @@ old version and tag values.
   later turn. `docs/TOOLBAR_ARCHITECTURE.md` and
   `docs/PDF_PAGE_GEOMETRY.md` are retained only as explicitly marked,
   unapproved working drafts; do not implement from them before that review.
-- `docs/DEVELOPMENT_SEQUENCE.md` records the decided implementation order:
+- `docs/DEVELOPMENT_SEQUENCE.md` records the decided implementation order,
+  but the new physical toolbar corrections consume `0.1.24`; shift the
+  previously planned geometry/autosave versions forward when that document is
+  updated:
   `0.1.20` minimal custom-tool bridge, `0.1.21` complete note-style toolbar,
-  `0.1.22` launch hotfix, `0.1.23` compact toolbar refinement, `0.1.24` PDF
-  geometry normalization, `0.1.25` autosave/recovery, and only
+  `0.1.22` launch hotfix, `0.1.23` compact toolbar refinement, `0.1.24`
+  document-tab/context-row correction, `0.1.25` PDF geometry normalization,
+  `0.1.26` autosave/recovery, and only
   then `0.2.0` promotion into `StudyCoachRootView()`. Later phases add the
   library/page model, editing/export, study/OCR, audio/sync, and AI. Keep one
   risky subsystem per physical-device test version.

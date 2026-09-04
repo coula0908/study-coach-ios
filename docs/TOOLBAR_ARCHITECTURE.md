@@ -1,6 +1,6 @@
 # StudyCoach 자체 툴바와 확장 필기 기능 설계
 
-상태: **`0.1.23` compact toolbox 구현 및 Apple CI 통과, iPad 실기 대기**
+상태: **`0.1.24` 문서 탭·주 도구줄·도구별 설정줄 구현 중**
 최종 조사일: 2026-09-05
 
 ## 확인된 기준선
@@ -46,20 +46,23 @@ Goodnotes의 Active Tool Menu와 Notability의 도구별 프리셋 방식을
 참조한다. 화면 자산을 복제하지 않고 다음 상호작용 원칙만 사용한다.
 
 ```text
-문서 캡슐:  열기 · 파일명 · 페이지 · undo · redo · 저장
-도구 캡슐:  [도구 아이콘] | [선택 도구 설정을 한 줄로 가로 스크롤]
+최상단 문서 탭:  [+] [열린 PDF 1] [열린 PDF 2] …
+주 도구줄:       [펜] [형광펜] [지우개] [올가미] [텍스트] [이미지]
+선택 도구 설정줄: [빠른 색상 …] [폭 슬라이더·숫자] [도구별 추가 설정]
+문서 동작:       PDF 위의 별도 소형 컨트롤(페이지·undo·redo·저장)
 ```
 
 - 주 도구를 한 번 누르면 즉시 마지막 프리셋으로 전환한다.
-- 펜과 형광펜을 선택하면 저장 색상과 굵기가 같은 얇은 줄의 바로
-  오른쪽에 나타나며, 화면에 다 들어오지 않는 항목은 좌우로 민다.
+- 펜과 형광펜을 선택하면 저장 색상 뒤에 충분히 긴 굵기 슬라이더와
+  현재 실제 폭 숫자가 나타난다. 선택된 도구를 다시 누르면 이 설정줄이
+  닫히고, 다른 도구를 누르면 해당 설정줄로 바뀐 채 열린다.
 - 도구 이름은 화면에 반복하지 않고 SF Symbol로 표시한다. 한국어
   이름과 설명은 VoiceOver 접근성 레이블에 유지한다.
 - 텍스트와 이미지는 한 번 삽입한 뒤 선택 도구로 자동 복귀한다.
 - 녹음 중에는 빨간 상태, 경과 시간, 일시정지/종료를 항상 분명하게
   표시한다.
-- 문서 줄과 도구 줄은 화면 끝까지 불필요하게 채우지 않는 가운데 정렬
-  캡슐이며, PDF 위에 세 번째 설정 줄을 추가하지 않는다.
+- 문서명은 최상단의 스크롤 가능한 열린 문서 탭에 놓고, 주 도구와
+  설정은 화면 끝까지 불필요하게 채우지 않는 가운데 정렬 캡슐로 둔다.
 
 ## 상태와 책임 분리
 
@@ -102,8 +105,8 @@ StudyCoachToolStore (정밀 설정과 프리셋의 기준)
   훨씬 중요하기 때문이다.
 - 현재 `logicalPageScale = 2`에 맞춰 초기 값을 제안하되, 실제 iPad에서
   한글 필기와 형광펜을 보고 별도의 펜/형광펜 표를 조정한다.
-- 단계 버튼과 연속 슬라이더를 같이 둘 수 있다. 버튼은 빠른 선택,
-  슬라이더는 세밀 조절이며 둘 다 같은 정확한 `width`를 갱신한다.
+- 열 개의 단계 버튼을 항상 펼치지 않고 하나의 단계형 슬라이더와 현재
+  실제 폭 숫자로 조작한다. 슬라이더는 최소 180pt 길이를 확보한다.
 - 새 값은 새 획에만 적용하고 기존 획은 바꾸지 않는다.
 
 ### 2. 빠른 색상 슬롯
@@ -331,7 +334,9 @@ struct ToolPalettePreferences: Codable, Equatable, Sendable {
 - [PaperMarkup](https://developer.apple.com/documentation/paperkit/papermarkup)
 - [PaperMarkupViewController.drawingTool](https://developer.apple.com/documentation/paperkit/papermarkupviewcontroller/drawingtool)
 - [PKInkingTool](https://developer.apple.com/documentation/pencilkit/pkinkingtool-swift.struct)
+- [PKInkingTool exact azimuth initializer](https://developer.apple.com/documentation/pencilkit/pkinkingtool-swift.struct/init%28_%3Acolor%3Awidth%3Aazimuth%3A%29-24rf4)
 - [PKEraserTool](https://developer.apple.com/documentation/pencilkit/pkerasertool-swift.struct)
+- [PKEraserTool exact width initializer](https://developer.apple.com/documentation/pencilkit/pkerasertool-swift.struct/init%28_%3Awidth%3A%29)
 - [PKLassoTool](https://developer.apple.com/documentation/pencilkit/pklassotool-swift.struct)
 - [UIPencilInteraction](https://developer.apple.com/documentation/uikit/uipencilinteraction)
 - [Handling double taps from Apple Pencil](https://developer.apple.com/documentation/applepencil/handling-double-taps-from-apple-pencil)

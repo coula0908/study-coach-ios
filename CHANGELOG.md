@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.1.24 — Document tabs and contextual tool controls
+
+- Move open PDF names into a persistent, horizontally scrollable document-tab
+  bar at the top; tapping a tab saves the outgoing page and loads only the
+  selected PDF document into memory.
+- Allow selecting multiple PDFs in one import and retain their tab metadata
+  across launches without retaining every `PDFDocument` in memory.
+- Put the six large, centered tool icons in the primary tool row and move page,
+  undo, redo, and save actions to a separate compact page overlay.
+- Show the selected tool's controls in a second horizontally scrollable row;
+  tapping the already-selected tool toggles this row without changing its
+  native PaperKit tool.
+- Replace ten permanently visible width targets with one 180-point step slider
+  and the current exact width number for pen, marker, and eraser.
+- Order pen and marker controls as quick colors then width, and eraser controls
+  as width then whole-stroke, partial, and precision modes.
+- Construct the native marker with its selected azimuth instead of mutating a
+  finished tool, and keep the selected nonzero width when constructing the
+  vector whole-stroke eraser.
+- Preserve the accepted PaperKit handwriting engine, PDF geometry,
+  renderer/tile cache, first-frame activation, and PaperMarkup files.
+
 ## 0.1.23 — Compact scrollable toolbox and readable marker
 
 - Replace the tall labeled tool dock plus separate settings tray with two

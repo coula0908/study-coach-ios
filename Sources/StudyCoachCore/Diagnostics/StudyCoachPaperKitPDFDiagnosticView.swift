@@ -55,11 +55,18 @@ private struct PaperKitPDFUnavailableView: View {
 
 #if canImport(PaperKit)
 @available(iOS 26.0, *)
+private struct PaperKitPDFDocumentTab: Codable, Equatable, Identifiable {
+    let id: String
+    let name: String
+}
+
+@available(iOS 26.0, *)
 @MainActor
 private final class PaperKitPDFDiagnosticModel: ObservableObject {
     @Published private(set) var document: PDFDocument?
     @Published private(set) var documentID = ""
     @Published private(set) var documentName = "PDF"
+    @Published private(set) var openDocuments: [PaperKitPDFDocumentTab] = []
     @Published var pageIndex = 0 {
         didSet {
             guard pageIndex != oldValue, !documentID.isEmpty else { return }
@@ -113,6 +120,9 @@ private final class PaperKitPDFDiagnosticModel: ObservableObject {
             document = pdfDocument
             documentID = identity
             documentName = sourceURL.lastPathComponent
+            let tab = PaperKitPDFDocumentTab(id: identity, name: documentName)
+            openDocuments.removeAll { $0.id == identity }
+            openDocuments.append(tab)
             pageIndex = min(
                 UserDefaults.standard.integer(
                     forKey: PaperKitPDFDiagnosticStorage.lastPageKey(for: identity)
@@ -127,9 +137,38 @@ private final class PaperKitPDFDiagnosticModel: ObservableObject {
                 documentName,
                 forKey: PaperKitPDFDiagnosticStorage.lastDocumentNameKey
             )
+            persistOpenDocuments()
         } catch {
             errorMessage = "PDF를 열 수 없습니다. \(error.localizedDescription)"
         }
+    }
+
+    func selectDocument(_ identity: String) {
+        guard identity != documentID,
+              let tab = openDocuments.first(where: { $0.id == identity }) else { return }
+        let url = PaperKitPDFDiagnosticStorage.documentDirectory(for: identity)
+            .appendingPathComponent("document.pdf")
+        guard let pdfDocument = PDFDocument(url: url), pdfDocument.pageCount > 0 else {
+            openDocuments.removeAll { $0.id == identity }
+            persistOpenDocuments()
+            errorMessage = "저장된 PDF를 다시 열 수 없습니다."
+            return
+        }
+
+        document = pdfDocument
+        documentID = identity
+        documentName = tab.name
+        pageIndex = min(
+            UserDefaults.standard.integer(
+                forKey: PaperKitPDFDiagnosticStorage.lastPageKey(for: identity)
+            ),
+            max(pdfDocument.pageCount - 1, 0)
+        )
+        UserDefaults.standard.set(identity, forKey: PaperKitPDFDiagnosticStorage.lastDocumentKey)
+        UserDefaults.standard.set(
+            documentName,
+            forKey: PaperKitPDFDiagnosticStorage.lastDocumentNameKey
+        )
     }
 
     func goToPreviousPage() {
@@ -141,6 +180,7 @@ private final class PaperKitPDFDiagnosticModel: ObservableObject {
     }
 
     private func restoreLastDocument() {
+        restoreOpenDocuments()
         guard let identity = UserDefaults.standard.string(
             forKey: PaperKitPDFDiagnosticStorage.lastDocumentKey
         ) else { return }
@@ -156,6 +196,10 @@ private final class PaperKitPDFDiagnosticModel: ObservableObject {
         documentName = UserDefaults.standard.string(
             forKey: PaperKitPDFDiagnosticStorage.lastDocumentNameKey
         ) ?? "PDF"
+        if !openDocuments.contains(where: { $0.id == identity }) {
+            openDocuments.append(PaperKitPDFDocumentTab(id: identity, name: documentName))
+            persistOpenDocuments()
+        }
         pageIndex = min(
             UserDefaults.standard.integer(
                 forKey: PaperKitPDFDiagnosticStorage.lastPageKey(for: identity)
@@ -163,12 +207,35 @@ private final class PaperKitPDFDiagnosticModel: ObservableObject {
             max(pdfDocument.pageCount - 1, 0)
         )
     }
+
+    private func restoreOpenDocuments() {
+        guard let data = UserDefaults.standard.data(
+            forKey: PaperKitPDFDiagnosticStorage.openDocumentsKey
+        ), let tabs = try? JSONDecoder().decode([PaperKitPDFDocumentTab].self, from: data)
+        else { return }
+
+        openDocuments = tabs.filter { tab in
+            FileManager.default.fileExists(
+                atPath: PaperKitPDFDiagnosticStorage.documentDirectory(for: tab.id)
+                    .appendingPathComponent("document.pdf").path
+            )
+        }
+        if openDocuments != tabs {
+            persistOpenDocuments()
+        }
+    }
+
+    private func persistOpenDocuments() {
+        guard let data = try? JSONEncoder().encode(openDocuments) else { return }
+        UserDefaults.standard.set(data, forKey: PaperKitPDFDiagnosticStorage.openDocumentsKey)
+    }
 }
 
 @available(iOS 26.0, *)
 private enum PaperKitPDFDiagnosticStorage {
     static let lastDocumentKey = "StudyCoachCore.PaperKitPDFAdaptive.lastDocumentID"
     static let lastDocumentNameKey = "StudyCoachCore.PaperKitPDFAdaptive.lastDocumentName"
+    static let openDocumentsKey = "StudyCoachCore.PaperKitPDFAdaptive.openDocuments.v1"
 
     static var rootURL: URL {
         let support = FileManager.default.urls(
@@ -213,13 +280,18 @@ private struct PaperKitPDFDiagnosticWorkspace: View {
             Divider()
 
             if let page = model.currentPage {
-                PaperKitPDFPageContainer(
-                    page: page,
-                    documentID: model.documentID,
-                    pageIndex: model.pageIndex,
-                    proxy: proxy
-                )
-                .id("\(model.documentID)-\(model.pageIndex)")
+                ZStack(alignment: .bottomTrailing) {
+                    PaperKitPDFPageContainer(
+                        page: page,
+                        documentID: model.documentID,
+                        pageIndex: model.pageIndex,
+                        proxy: proxy
+                    )
+                    .id("\(model.documentID)-\(model.pageIndex)")
+
+                    documentActionsOverlay
+                        .padding(12)
+                }
             } else {
                 ContentUnavailableView {
                     Label("PDF를 선택하세요", systemImage: "doc.text")
@@ -236,12 +308,13 @@ private struct PaperKitPDFDiagnosticWorkspace: View {
         .fileImporter(
             isPresented: $isShowingPDFImporter,
             allowedContentTypes: [.pdf],
-            allowsMultipleSelection: false
+            allowsMultipleSelection: true
         ) { result in
             switch result {
             case .success(let urls):
-                guard let url = urls.first else { return }
-                model.importPDF(from: url)
+                for url in urls {
+                    model.importPDF(from: url)
+                }
             case .failure(let error):
                 let cocoaError = error as NSError
                 if cocoaError.code != NSUserCancelledError {
@@ -305,10 +378,13 @@ private struct PaperKitPDFDiagnosticWorkspace: View {
 
     private var toolbar: some View {
         VStack(spacing: 5) {
-            documentBar
+            documentTabsBar
 
             if model.document != nil {
-                compactToolbox
+                primaryToolBar
+                if proxy.paletteState.isContextPanelExpanded {
+                    secondaryToolBar
+                }
             }
 
             if proxy.statusIsError {
@@ -324,80 +400,118 @@ private struct PaperKitPDFDiagnosticWorkspace: View {
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
         .animation(.snappy(duration: 0.2), value: proxy.paletteState.selectedTool)
+        .animation(.snappy(duration: 0.2), value: proxy.paletteState.isContextPanelExpanded)
     }
 
-    private var documentBar: some View {
-        HStack(spacing: 5) {
+    private var documentTabsBar: some View {
+        HStack(spacing: 6) {
             Button {
                 isShowingPDFImporter = true
             } label: {
-                HStack(spacing: 6) {
-                    Image(systemName: "folder.fill")
-                        .foregroundStyle(Color.accentColor)
-                    Text(model.document == nil ? "PDF" : model.documentName)
-                        .font(.subheadline.weight(.semibold))
-                        .lineLimit(1)
-                }
+                Image(systemName: "plus")
+                    .font(.system(size: 16, weight: .bold))
+                    .frame(width: 38, height: 34)
+                    .background(Color.accentColor.opacity(0.12), in: RoundedRectangle(cornerRadius: 9))
             }
             .buttonStyle(.plain)
             .accessibilityLabel("PDF 열기")
-            .frame(maxWidth: 250, alignment: .leading)
 
-            Spacer(minLength: 2)
-
-            HStack(spacing: 4) {
-                compactIconButton("chevron.left", label: "이전 페이지") {
-                    proxy.save()
-                    model.goToPreviousPage()
+            ScrollView(.horizontal, showsIndicators: false) {
+                HStack(spacing: 4) {
+                    ForEach(model.openDocuments) { tab in
+                        documentTab(tab)
+                    }
                 }
-                .disabled(model.pageIndex <= 0)
-
-                Text(model.document == nil ? "– / –" : "\(model.pageIndex + 1) / \(model.pageCount)")
-                    .font(.subheadline.weight(.medium).monospacedDigit())
-                    .frame(minWidth: 62)
-
-                compactIconButton("chevron.right", label: "다음 페이지") {
-                    proxy.save()
-                    model.goToNextPage()
-                }
-                .disabled(model.pageIndex + 1 >= model.pageCount)
             }
-
-            compactIconButton("arrow.uturn.backward", label: "실행 취소") { proxy.undo() }
-            compactIconButton("arrow.uturn.forward", label: "다시 실행") { proxy.redo() }
-            compactIconButton("square.and.arrow.down", label: "저장") { proxy.save() }
-                .disabled(model.document == nil)
+            .contentMargins(.horizontal, 2, for: .scrollContent)
         }
-        .padding(.horizontal, 8)
-        .padding(.vertical, 4)
-        .frame(maxWidth: 920)
-        .background(.ultraThinMaterial, in: Capsule())
-        .overlay {
-            Capsule()
-                .stroke(Color.primary.opacity(0.07), lineWidth: 1)
-        }
+        .frame(maxWidth: .infinity, minHeight: 38, maxHeight: 38)
     }
 
-    private var compactToolbox: some View {
-        ScrollView(.horizontal, showsIndicators: false) {
-            HStack(spacing: 4) {
-                ForEach(StudyCoachPaletteTool.allCases) { tool in
-                    toolButton(tool)
-                }
-
-                Divider()
-                    .frame(height: 26)
-                    .padding(.horizontal, 3)
-
-                activeToolControls
+    private func documentTab(_ tab: PaperKitPDFDocumentTab) -> some View {
+        let isSelected = model.documentID == tab.id
+        return Button {
+            proxy.save()
+            model.selectDocument(tab.id)
+        } label: {
+            HStack(spacing: 6) {
+                Image(systemName: "doc.text")
+                    .font(.system(size: 13, weight: .semibold))
+                Text(tab.name)
+                    .font(.subheadline.weight(isSelected ? .semibold : .regular))
+                    .lineLimit(1)
+            }
+            .foregroundStyle(isSelected ? Color.accentColor : Color.primary)
+            .padding(.horizontal, 12)
+            .frame(maxWidth: 220, minHeight: 34)
+            .background(
+                isSelected ? Color.accentColor.opacity(0.13) : Color.primary.opacity(0.045),
+                in: RoundedRectangle(cornerRadius: 9, style: .continuous)
+            )
+            .overlay {
+                RoundedRectangle(cornerRadius: 9, style: .continuous)
+                    .stroke(isSelected ? Color.accentColor.opacity(0.3) : Color.clear)
             }
         }
-        .contentMargins(.horizontal, 5, for: .scrollContent)
-        .frame(maxWidth: 920, minHeight: 44, maxHeight: 44)
+        .buttonStyle(.plain)
+        .accessibilityLabel("\(tab.name) 문서")
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private var primaryToolBar: some View {
+        HStack(spacing: 5) {
+            ForEach(StudyCoachPaletteTool.allCases) { tool in
+                toolButton(tool)
+            }
+        }
+        .padding(.horizontal, 7)
+        .frame(minHeight: 48, maxHeight: 48)
         .background(.regularMaterial, in: Capsule())
         .overlay {
             Capsule().stroke(Color.primary.opacity(0.08), lineWidth: 1)
         }
+    }
+
+    private var secondaryToolBar: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            activeToolControls
+                .padding(.horizontal, 8)
+        }
+        .contentMargins(.horizontal, 4, for: .scrollContent)
+        .frame(maxWidth: 920, minHeight: 46, maxHeight: 46)
+        .background(.regularMaterial, in: Capsule())
+        .overlay {
+            Capsule().stroke(Color.primary.opacity(0.08), lineWidth: 1)
+        }
+    }
+
+    private var documentActionsOverlay: some View {
+        HStack(spacing: 3) {
+            compactIconButton("chevron.left", label: "이전 페이지") {
+                proxy.save()
+                model.goToPreviousPage()
+            }
+            .disabled(model.pageIndex <= 0)
+
+            Text("\(model.pageIndex + 1) / \(model.pageCount)")
+                .font(.caption.weight(.semibold).monospacedDigit())
+                .frame(minWidth: 48)
+
+            compactIconButton("chevron.right", label: "다음 페이지") {
+                proxy.save()
+                model.goToNextPage()
+            }
+            .disabled(model.pageIndex + 1 >= model.pageCount)
+
+            Divider().frame(height: 20)
+            compactIconButton("arrow.uturn.backward", label: "실행 취소") { proxy.undo() }
+            compactIconButton("arrow.uturn.forward", label: "다시 실행") { proxy.redo() }
+            compactIconButton("square.and.arrow.down", label: "저장") { proxy.save() }
+        }
+        .padding(.horizontal, 7)
+        .padding(.vertical, 4)
+        .background(.ultraThinMaterial, in: Capsule())
+        .overlay { Capsule().stroke(Color.primary.opacity(0.08)) }
     }
 
     private var activeToolControls: AnyView {
@@ -460,20 +574,26 @@ private struct PaperKitPDFDiagnosticWorkspace: View {
         case .eraser:
             AnyView(
                 HStack(spacing: 4) {
-                    ForEach(StudyCoachPaletteEraserMode.allCases) { mode in
+                    widthSlider(
+                        widths: StudyCoachToolPaletteState.eraserWidths,
+                        selectedLevel: proxy.paletteState.eraserWidthLevel,
+                        color: .primary,
+                        select: proxy.setEraserWidthLevel
+                    )
+                    toolDivider
+                    ForEach(
+                        [
+                            StudyCoachPaletteEraserMode.stroke,
+                            .partial,
+                            .precision,
+                        ]
+                    ) { mode in
                         compactChoiceIconButton(
                             mode.systemImage,
                             label: mode.title,
                             isSelected: proxy.paletteState.eraserMode == mode
                         ) { proxy.setEraserMode(mode) }
                     }
-                    toolDivider
-                    inlineWidthSelector(
-                        widths: StudyCoachToolPaletteState.eraserWidths,
-                        selectedLevel: proxy.paletteState.eraserWidthLevel,
-                        color: .primary,
-                        select: proxy.setEraserWidthLevel
-                    )
                 }
             )
         case .lasso:
@@ -536,13 +656,6 @@ private struct PaperKitPDFDiagnosticWorkspace: View {
         replaceColor: @escaping (StudyCoachRGBAColor) -> Void
     ) -> some View {
         Group {
-            inlineWidthSelector(
-                widths: widths,
-                selectedLevel: selectedWidthLevel,
-                color: Color(color),
-                select: selectWidth
-            )
-            toolDivider
             ForEach(Array(colors.indices), id: \.self) { index in
                 Button { selectColor(index) } label: {
                     Circle()
@@ -574,45 +687,50 @@ private struct PaperKitPDFDiagnosticWorkspace: View {
             .labelsHidden()
             .frame(width: 30, height: 34)
             .accessibilityLabel("선택 색상 편집")
+            toolDivider
+            widthSlider(
+                widths: widths,
+                selectedLevel: selectedWidthLevel,
+                color: Color(color),
+                select: selectWidth
+            )
         }
     }
 
-    private func inlineWidthSelector(
+    private func widthSlider(
         widths: [Double],
         selectedLevel: Int,
         color: Color,
         select: @escaping (Int) -> Void
     ) -> some View {
-        ForEach(Array(widths.indices), id: \.self) { index in
-            Button { select(index) } label: {
-                Circle()
-                    .fill(color)
-                    .frame(
-                        width: widthPreviewDiameter(index: index, count: widths.count),
-                        height: widthPreviewDiameter(index: index, count: widths.count)
-                    )
-                    .frame(width: 27, height: 34)
-                    .background(
-                        selectedLevel == index ? Color.accentColor.opacity(0.15) : Color.clear,
-                        in: Circle()
-                    )
-                    .overlay {
-                        if selectedLevel == index {
-                            Circle().stroke(Color.accentColor, lineWidth: 1.5)
-                                .frame(width: 26, height: 26)
-                        }
-                    }
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel("굵기 \(index + 1)")
-            .accessibilityValue(
-                widths[index].formatted(.number.precision(.fractionLength(0...1)))
-            )
-        }
-    }
+        let safeLevel = min(max(selectedLevel, 0), max(widths.count - 1, 0))
+        let value = widths.isEmpty ? 0 : widths[safeLevel]
 
-    private func widthPreviewDiameter(index: Int, count: Int) -> CGFloat {
-        3 + (CGFloat(index) / CGFloat(max(count - 1, 1))) * 14
+        return HStack(spacing: 8) {
+            Image(systemName: "lineweight")
+                .font(.system(size: 16, weight: .semibold))
+                .foregroundStyle(color)
+
+            Slider(
+                value: Binding(
+                    get: { Double(safeLevel) },
+                    set: { select(Int($0.rounded())) }
+                ),
+                in: 0...Double(max(widths.count - 1, 1)),
+                step: 1
+            )
+            .frame(width: 180)
+            .tint(color)
+
+            Text(value.formatted(.number.precision(.fractionLength(0...1))))
+                .font(.caption.weight(.semibold).monospacedDigit())
+                .frame(width: 34, alignment: .trailing)
+        }
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel("굵기")
+        .accessibilityValue(
+            value.formatted(.number.precision(.fractionLength(0...1)))
+        )
     }
 
     private func angleButton(_ index: Int) -> some View {
@@ -641,9 +759,9 @@ private struct PaperKitPDFDiagnosticWorkspace: View {
     ) -> some View {
         Button(action: action) {
             Image(systemName: systemImage)
-                .font(.system(size: 17, weight: .semibold))
+                .font(.system(size: 20, weight: .semibold))
                 .foregroundStyle(isSelected ? Color.accentColor : Color.primary)
-                .frame(width: 36, height: 34)
+                .frame(width: 42, height: 42)
                 .background(
                     isSelected ? Color.accentColor.opacity(0.14) : Color.clear,
                     in: RoundedRectangle(cornerRadius: 10, style: .continuous)
@@ -723,7 +841,7 @@ private extension StudyCoachPaletteEraserMode {
         switch self {
         case .precision: "정밀"
         case .partial: "부분"
-        case .stroke: "획"
+        case .stroke: "전체"
         }
     }
 
@@ -1160,22 +1278,27 @@ private final class PaperKitPDFPageViewController: UIViewController {
         case .highlighter:
             let type = PKInkingTool.InkType.marker
             let width = CGFloat(state.highlighterWidth).clamped(to: type.validWidthRange)
-            var tool = PKInkingTool(
+            paperController.drawingTool = PKInkingTool(
                 type,
                 color: UIColor(state.highlighterColor).withAlphaComponent(
                     CGFloat(state.highlighterOpacity)
                 ),
-                width: width
+                width: width,
+                azimuth: CGFloat(state.highlighterAzimuth)
             )
-            tool.azimuth = CGFloat(state.highlighterAzimuth)
-            paperController.drawingTool = tool
         case .eraser:
             let type: PKEraserTool.EraserType = switch state.eraserMode {
             case .precision: .fixedWidthBitmap
             case .partial: .bitmap
             case .stroke: .vector
             }
-            let width = CGFloat(state.eraserWidth).clamped(to: type.validWidthRange)
+            // PencilKit's vector eraser removes an entire touched stroke, but
+            // its own valid-width range can collapse the supplied width. Keep
+            // the user's selected hit/cursor size for vector mode while still
+            // clamping bitmap modes to their documented native ranges.
+            let width = type == .vector
+                ? CGFloat(state.eraserWidth)
+                : CGFloat(state.eraserWidth).clamped(to: type.validWidthRange)
             paperController.drawingTool = PKEraserTool(type, width: width)
         case .lasso, .text, .image:
             paperController.drawingTool = PKLassoTool()

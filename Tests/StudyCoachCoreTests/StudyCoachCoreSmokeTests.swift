@@ -101,6 +101,21 @@ final class StudyCoachCoreSmokeTests: XCTestCase {
         XCTAssertEqual(state.selectedTool, .highlighter)
     }
 
+    func testSelectingCurrentToolTogglesItsSettingsRow() {
+        var state = StudyCoachToolPaletteState()
+
+        XCTAssertTrue(state.isContextPanelExpanded)
+        state.select(.pen)
+        XCTAssertFalse(state.isContextPanelExpanded)
+        state.select(.pen)
+        XCTAssertTrue(state.isContextPanelExpanded)
+
+        state.select(.lasso)
+        XCTAssertFalse(state.isContextPanelExpanded)
+        state.select(.highlighter)
+        XCTAssertTrue(state.isContextPanelExpanded)
+    }
+
     func testPaletteClampsControlLevelsAndUpdatesQuickColorSlot() {
         var state = StudyCoachToolPaletteState()
 
@@ -148,8 +163,12 @@ final class StudyCoachCoreSmokeTests: XCTestCase {
         XCTAssertNotNil(controller.markup)
         XCTAssertEqual(controller.supportedFeatureSet, .latest)
 
-        var marker = PKInkingTool(.marker, color: .systemYellow, width: 2)
-        marker.azimuth = .pi / 4
+        let marker = PKInkingTool(
+            .marker,
+            color: .systemYellow,
+            width: 2,
+            azimuth: .pi / 4
+        )
         controller.drawingTool = marker
         XCTAssertEqual(marker.azimuth, .pi / 4, accuracy: 0.001)
 

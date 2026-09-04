@@ -93,8 +93,8 @@ if ($rootView.Contains('StudyCoachPaperKitDiagnosticView')) {
     throw 'StudyCoachRootView must not route production users into the PaperKit diagnostic.'
 }
 
-if (-not $versionDocument.Contains('Current package version: `0.1.23`')) {
-    throw 'VERSION.md must identify the source tree as package version 0.1.23.'
+if (-not $versionDocument.Contains('Current package version: `0.1.24`')) {
+    throw 'VERSION.md must identify the source tree as package version 0.1.24.'
 }
 
 if ($rootView.Contains('StudyCoachPaperKitPDFDiagnosticView')) {
@@ -138,7 +138,10 @@ foreach ($requiredPaperKitPDFText in @(
     'isPaletteActivationReady'
     'lastAppliedPaletteState'
     'await Task.yield()'
-    'private var compactToolbox'
+    'private var documentTabsBar'
+    'private var primaryToolBar'
+    'private var secondaryToolBar'
+    'private func widthSlider('
     'ScrollView(.horizontal, showsIndicators: false)'
     'state.highlighterOpacity'
     '.withAlphaComponent('
