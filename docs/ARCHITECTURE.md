@@ -113,13 +113,12 @@ production editor. It deliberately uses no `PDFView`:
 3. PaperKit's `contentView` is a page-sized image container below the markup.
 4. A complete four-pixels-per-PDF-point image appears atomically at page load,
    subject to a 4096-pixel side and 14-million-pixel allocation bound.
-5. A main-actor task samples PaperKit's visible frame about every 33
-   milliseconds. During an active pinch it tracks changes but does not render.
-   The existing UIKit pinch recognizer is observed by adding a target-action
-   callback without replacing its delegate or adding another recognizer. At
-   `.ended` or `.cancelled`, the final region plus overscan is requested once
-   from the original PDF at device presentation density. There is no fixed
-   post-gesture settle delay. The candidate avoids
+5. Version `0.1.18` has no permanent viewport sampler. It observes existing
+   UIKit pan and pinch recognizers without replacing their delegates or adding
+   another recognizer. During navigation it discards the detail image, and
+   after the gesture plus UIKit deceleration or zoom bounce ends it requests
+   the final visible region once. There is no fixed post-gesture settle delay.
+   The candidate avoids
    `PaperMarkupViewController.Delegate` because the physical Swift Playgrounds
    SDK rejects that conformance even when the Xcode 26 SDK accepts it.
 6. One detail render may run while one replaceable latest request waits. Stale
@@ -135,6 +134,25 @@ Do not promote this candidate into `StudyCoachRootView` until the target iPad
 confirms page orientation, alignment, system-tool behavior, writing feel,
 base-page appearance, post-zoom sharpening, page restoration, and memory
 stability on a representative study PDF.
+
+### Next renderer direction
+
+Physical testing showed that scale changes and fixed-scale translation must not
+share one viewport-replacement policy. During pinch, transient zoom levels
+should not trigger detail work. During a pan, however, already sharp content
+must remain available and only newly exposed coverage should be rendered.
+
+The next candidate should retain PaperKit as the only viewport and markup owner,
+keep the complete page image as a no-blank fallback, and add a bounded cached
+tile/level-of-detail layer for the PDF background. Existing tiles move with the
+page at fixed scale; visible and direction-adjacent missing tiles render in the
+background without clearing overlapping sharp tiles. Pinch freezes transient
+level requests and selects the next level only at gesture end. This follows the
+established `CATiledLayer`/PDF-viewer pattern while avoiding the earlier visible
+blank-rectangle failure through the permanent fallback, no-fade publication,
+prefetching, and LRU-bounded reuse. See `HANDOFF.md` for sources, rationale, and
+the physical-device acceptance checklist. This direction is documented but not
+implemented in `0.1.18`.
 
 ## Document identity and storage
 
