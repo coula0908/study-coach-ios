@@ -8,11 +8,12 @@ The standalone `StudyCoachPaperKitDiagnosticView` passed on the target iPadOS
 26 device. The first PDF diagnostic exposed avoidable custom-renderer costs:
 PDF tiles became visible while pages loaded, the minimum ink width was too
 large, and maximum-zoom input did not preserve the accepted handwriting feel.
-The `0.1.17` diagnostic keeps PaperKit as the sole interaction and markup owner,
+The `0.1.18` diagnostic keeps PaperKit as the sole interaction and markup owner,
 removes `PDFView`, doubles the logical page coordinates, displays a complete
-bounded PDF page image, and atomically replaces only the visible region as pan
-or pinch changes. It remains isolated until the physical iPad acceptance
-check passes; the existing production root stays recoverable and unchanged.
+bounded PDF page image, and atomically replaces the visible region only after
+pan, inertial scrolling, pinch, and zoom bouncing have all ended. It remains
+isolated until the physical iPad acceptance check passes; the existing
+production root stays recoverable and unchanged.
 
 The production viewer follows Apple's WWDC22 design: one `PDFView` owns PDF
 layout, scrolling, zoom, crop-box transforms, and rotation, while

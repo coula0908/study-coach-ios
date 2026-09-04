@@ -7,7 +7,8 @@ second isolated diagnostic checks whether a real PDF page and PaperKit ink stay
 aligned and sharp through pan, zoom, page navigation, save, and relaunch. It
 now uses the selected PaperKit-first rendering design: a complete bounded page
 image is always present, and only the visible region is rerendered after pan or
-pinch updates. There is no fixed post-gesture waiting period.
+pinch navigation fully ends. There is no permanent viewport sampler and no
+fixed post-gesture waiting period.
 
 It does not change `StudyCoachRootView`, the production `PDFKitContainerView`,
 or existing `.drawing` files. Adaptive diagnostic PDFs and PaperMarkup data
@@ -44,9 +45,10 @@ already displayed.
 6. A thin diagonal stroke stays sharp at maximum zoom.
 7. The PDF page first appears as one complete page, never as successively
    appearing white or blank rectangular tiles.
-8. While pinching, the complete base page remains visible and no new detail
-   render starts, even when the fingers pause without lifting. When the pinch
-   ends, the final visible region begins rendering immediately with no
+8. During one-finger pan or two-finger pinch, the complete base page remains
+   visible and no new detail render starts, even when the fingers pause without
+   lifting. After the fingers lift, any inertial scrolling or zoom bounce must
+   also finish before the final visible region is rendered once. There is no
    additional 0.3-second wait.
 9. The PDF text and lines become sharp again after that rerender completes.
 10. Ink remains anchored to the same printed word or line while zooming and panning.
@@ -72,21 +74,24 @@ or their alignment.
   matching the coordinate density of the accepted `0.1.4` standalone test.
 - A complete page image is rendered at four pixels per original PDF point. The
   longest side is capped at 4096 pixels and total output at 14 million pixels.
-- A main-actor task samples `contentVisibleFrame` about every 33 milliseconds.
-  It tracks the newest frame during a pinch without rendering it. Outside an
-  active pinch, changed frames remain eligible for immediate detail rendering.
-- The diagnostic observes PaperKit's existing UIKit pinch recognizer with an
-  added target-action callback. It does not replace a gesture delegate, add a
+- There is no permanent timer or polling task. The diagnostic observes the
+  existing UIKit pan and pinch recognizers in PaperKit's view hierarchy through
+  added target-action callbacks. It does not replace a gesture delegate, add a
   competing recognizer, or change Pencil and finger routing.
-- When the existing recognizer reaches `.ended` or `.cancelled`, an 18-percent
-  overscanned final visible region is requested once at 1.2 times the physical
-  presentation density, subject to the same allocation bounds.
+- While a recognizer is active, obsolete detail output is discarded and the
+  complete base page remains stable. After `.ended` or `.cancelled`, a small
+  temporary task checks UIKit's own `isDecelerating`, `isZooming`, and
+  `isZoomBouncing` states only while motion continues.
+- Once UIKit reports no remaining motion, an 18-percent overscanned final
+  visible region is requested once at 1.2 times the physical presentation
+  density, subject to the same allocation bounds.
 - The diagnostic deliberately does not conform to
   `PaperMarkupViewController.Delegate`: the physical Swift Playgrounds SDK
   rejects that conformance even though Xcode 26 accepts it.
 - Detail work is bounded to one active render and one replaceable pending
-  request. During a gesture, stale results are discarded and only the latest
-  viewport waits to render, so work cannot accumulate in an unbounded queue.
+  request. During a gesture and inertial motion, stale results are discarded
+  and no intermediate viewport is submitted, so work cannot accumulate in an
+  unbounded queue.
 - Base and detail images are created on one background rendering queue and
   installed only after a complete image is ready. No `CATiledLayer` is used.
 - The same PaperKit transform applies to the PDF content view and its ink.

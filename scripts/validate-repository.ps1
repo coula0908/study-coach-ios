@@ -92,8 +92,8 @@ if ($rootView.Contains('StudyCoachPaperKitDiagnosticView')) {
     throw 'StudyCoachRootView must not route production users into the PaperKit diagnostic.'
 }
 
-if (-not $versionDocument.Contains('Current package version: `0.1.17`')) {
-    throw 'VERSION.md must identify the source tree as package version 0.1.17.'
+if (-not $versionDocument.Contains('Current package version: `0.1.18`')) {
+    throw 'VERSION.md must identify the source tree as package version 0.1.18.'
 }
 
 if ($rootView.Contains('StudyCoachPaperKitPDFDiagnosticView')) {
@@ -108,11 +108,13 @@ foreach ($requiredPaperKitPDFText in @(
     'baseImageView'
     'detailImageView'
     'contentVisibleFrame'
-    'viewportMonitoringTask'
-    'viewportSampleNanoseconds: UInt64 = 33_000_000'
-    'descendantPinchGestureRecognizers'
-    'observedPinchGestureChanged'
-    'activePinchRecognizerIDs'
+    'navigationCompletionTask'
+    'descendantNavigationGestureRecognizers'
+    'observedNavigationGestureChanged'
+    'activeNavigationRecognizerIDs'
+    'isDecelerating'
+    'isZooming'
+    'isZoomBouncing'
     'discardDetailImage()'
     'detailRenderIsInFlight'
     'pendingDetailRequest'
@@ -134,6 +136,11 @@ if ($paperKitPDFDiagnostic.Contains('CATiledLayer')) {
 foreach ($removedViewportDelayText in @(
     'viewportSettleDelay'
     'pendingViewportTask'
+    'viewportMonitoringTask'
+    'viewportSampleNanoseconds'
+    'descendantScrollViews'
+    'descendantPinchGestureRecognizers'
+    'observedPinchGestureChanged'
     'Timer(timeInterval:'
     'PaperMarkupViewController.Delegate'
 )) {

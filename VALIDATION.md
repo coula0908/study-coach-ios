@@ -18,6 +18,28 @@
 Do not mark the MVP complete until the native Pencil input path and the
 remaining acceptance checks pass in Swift Playgrounds on the target iPad.
 
+## Pan-end-only detail rendering: 0.1.18
+
+- Date: 2026-09-04
+- Physical-device result for 0.1.17: pinch zoom worked, but one-finger panning
+  repeatedly alternated the status between detail rendering and completion;
+  the repeated base/detail swaps made existing writing appear to shake
+- Cause: the permanent 33-millisecond fallback sampler suppressed rendering
+  only for active pinch recognizers, so every changed pan viewport immediately
+  submitted another high-resolution request
+- Required behavior: no high-resolution PDF detail render during one-finger
+  pan, a stationary finger hold, inertial scrolling, two-finger pinch, or zoom
+  bouncing
+- Completion behavior: submit the final visible region once after all active
+  navigation recognizers end and UIKit reports no remaining scroll/zoom motion
+- Gesture ownership: unchanged; observe only existing UIKit pan and pinch
+  recognizers in PaperKit's view hierarchy through target-action
+- Permanent viewport sampler: removed
+- Fixed post-gesture delay: none
+- Windows repository validation: pending
+- Apple toolchain build and simulator tests: pending
+- Physical iPadOS 26 acceptance: pending
+
 ## Pinch-end-only detail rendering: 0.1.17
 
 - Date: 2026-09-04
@@ -37,7 +59,8 @@ remaining acceptance checks pass in Swift Playgrounds on the target iPad.
 - Xcode 16.4 fallback build and iPad Simulator tests: passed
 - Xcode 26 normal build, strict Swift 6 concurrency build, and iPad Simulator
   tests: passed
-- Physical iPadOS 26 acceptance: pending
+- Physical iPadOS 26 acceptance: failed for one-finger panning; repeated detail
+  rendering made writing appear to shake
 
 ## Swift Playgrounds viewport compatibility: 0.1.16
 

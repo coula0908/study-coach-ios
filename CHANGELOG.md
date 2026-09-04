@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.18 — Render once after pan and inertial scrolling end
+
+- Remove the permanent 33-millisecond viewport sampler that made every
+  one-finger pan position eligible for a new high-resolution render.
+- Observe the existing UIKit pan and pinch recognizers in PaperKit's view
+  hierarchy without replacing delegates or adding competing recognizers.
+- Keep the complete base page visible throughout finger movement, a stationary
+  finger hold, inertial scrolling, and zoom bouncing.
+- Submit one final visible region only after the last gesture ends and UIKit
+  reports that navigation motion has stopped; no fixed post-gesture delay is
+  added.
+- Prevent base/detail image replacement from repeatedly making PaperKit ink
+  appear to shake during one-finger panning.
+
 ## 0.1.17 — Render once after pinch ends
 
 - Observe PaperKit's existing UIKit pinch recognizer through target-action

@@ -361,9 +361,9 @@ private final class PaperKitPDFPageViewController: UIViewController {
     /// Matching the coordinate density of the physically accepted 0.1.4
     /// standalone canvas makes system tool widths useful on PDF-sized pages.
     private static let logicalPageScale: CGFloat = 2
-    /// About one display frame at 30 Hz. This samples for viewport changes; it
-    /// is not a post-gesture debounce and never delays a detected render.
-    private static let viewportSampleNanoseconds: UInt64 = 33_000_000
+    /// Used only while UIKit reports that inertial scrolling or zoom bouncing
+    /// is still active. There is no permanent viewport polling task.
+    private static let motionCheckNanoseconds: UInt64 = 16_000_000
 
     private let documentID: String
     private let pageIndex: Int
@@ -371,10 +371,11 @@ private final class PaperKitPDFPageViewController: UIViewController {
     private let paperController: PaperMarkupViewController
     private let backgroundView: PaperKitPDFPageBackgroundView
     private let toolPicker: PKToolPicker
-    private var viewportMonitoringTask: Task<Void, Never>?
-    private var lastObservedVisibleFrame = CGRect.null
-    private var observedPinchRecognizers: [UIPinchGestureRecognizer] = []
-    private var activePinchRecognizerIDs: Set<ObjectIdentifier> = []
+    private var navigationCompletionTask: Task<Void, Never>?
+    private var lastSubmittedVisibleFrame = CGRect.null
+    private var lastViewportSize = CGSize.zero
+    private var observedNavigationRecognizers: [UIGestureRecognizer] = []
+    private var activeNavigationRecognizerIDs: Set<ObjectIdentifier> = []
 
     init(
         page: PDFPage,
@@ -462,8 +463,8 @@ private final class PaperKitPDFPageViewController: UIViewController {
         }
         backgroundView.onBaseImageReady = { [weak self] in
             guard let self else { return }
-            self.lastObservedVisibleFrame = .null
-            self.sampleViewport()
+            self.lastSubmittedVisibleFrame = .null
+            self.renderCurrentViewport()
         }
         backgroundView.prepareBaseImage()
 
@@ -491,14 +492,26 @@ private final class PaperKitPDFPageViewController: UIViewController {
         paperController.pencilKitResponderState.activeToolPicker = toolPicker
         paperController.pencilKitResponderState.toolPickerVisibility = .visible
         paperController.becomeFirstResponder()
-        installPinchObservationIfNeeded()
-        startViewportMonitoring()
+        installNavigationObservationIfNeeded()
+        renderCurrentViewport()
+    }
+
+    override func viewDidLayoutSubviews() {
+        super.viewDidLayoutSubviews()
+        installNavigationObservationIfNeeded()
+
+        let viewportSize = paperController.view.bounds.size
+        guard viewportSize != lastViewportSize else { return }
+        lastViewportSize = viewportSize
+        lastSubmittedVisibleFrame = .null
+        renderCurrentViewport()
     }
 
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
-        stopViewportMonitoring()
-        removePinchObservation()
+        navigationCompletionTask?.cancel()
+        navigationCompletionTask = nil
+        removeNavigationObservation()
     }
 
     @objc
@@ -531,43 +544,17 @@ private final class PaperKitPDFPageViewController: UIViewController {
         }
     }
 
-    private func startViewportMonitoring() {
-        guard viewportMonitoringTask == nil else { return }
-        sampleViewport()
-
-        viewportMonitoringTask = Task { @MainActor [weak self] in
-            while !Task.isCancelled {
-                if let self {
-                    self.sampleViewport()
-                } else {
-                    return
-                }
-                try? await Task.sleep(nanoseconds: Self.viewportSampleNanoseconds)
-            }
-        }
-    }
-
-    private func stopViewportMonitoring() {
-        viewportMonitoringTask?.cancel()
-        viewportMonitoringTask = nil
-    }
-
-    private func sampleViewport() {
-        installPinchObservationIfNeeded()
+    private func renderCurrentViewport() {
+        guard activeNavigationRecognizerIDs.isEmpty else { return }
 
         let visibleFrame = paperController.contentVisibleFrame.standardized
             .intersection(backgroundView.bounds)
         guard visibleFrame.isUsableViewport else { return }
 
-        guard !visibleFrame.isApproximatelyEqual(to: lastObservedVisibleFrame) else {
+        guard !visibleFrame.isApproximatelyEqual(to: lastSubmittedVisibleFrame) else {
             return
         }
-        lastObservedVisibleFrame = visibleFrame
-
-        guard activePinchRecognizerIDs.isEmpty else {
-            backgroundView.discardDetailImage()
-            return
-        }
+        lastSubmittedVisibleFrame = visibleFrame
 
         backgroundView.requestDetailImage(
             for: visibleFrame,
@@ -575,44 +562,83 @@ private final class PaperKitPDFPageViewController: UIViewController {
         )
     }
 
-    private func installPinchObservationIfNeeded() {
-        let installedIDs = Set(observedPinchRecognizers.map(ObjectIdentifier.init))
-        let discoveredRecognizers = paperController.view.descendantPinchGestureRecognizers
-            .filter { !installedIDs.contains(ObjectIdentifier($0)) }
+    private func installNavigationObservationIfNeeded() {
+        let installedIDs = Set(observedNavigationRecognizers.map(ObjectIdentifier.init))
+        let discoveredRecognizers = paperController.view
+            .descendantNavigationGestureRecognizers
 
-        for recognizer in discoveredRecognizers {
-            recognizer.addTarget(self, action: #selector(observedPinchGestureChanged(_:)))
-            observedPinchRecognizers.append(recognizer)
+        for recognizer in discoveredRecognizers
+            where !installedIDs.contains(ObjectIdentifier(recognizer)) {
+            recognizer.addTarget(
+                self,
+                action: #selector(observedNavigationGestureChanged(_:))
+            )
+            observedNavigationRecognizers.append(recognizer)
         }
     }
 
-    private func removePinchObservation() {
-        for recognizer in observedPinchRecognizers {
-            recognizer.removeTarget(self, action: #selector(observedPinchGestureChanged(_:)))
+    private func removeNavigationObservation() {
+        for recognizer in observedNavigationRecognizers {
+            recognizer.removeTarget(
+                self,
+                action: #selector(observedNavigationGestureChanged(_:))
+            )
         }
-        observedPinchRecognizers.removeAll()
-        activePinchRecognizerIDs.removeAll()
+        observedNavigationRecognizers.removeAll()
+        activeNavigationRecognizerIDs.removeAll()
     }
 
     @objc
-    private func observedPinchGestureChanged(_ recognizer: UIPinchGestureRecognizer) {
+    private func observedNavigationGestureChanged(_ recognizer: UIGestureRecognizer) {
         let recognizerID = ObjectIdentifier(recognizer)
         switch recognizer.state {
         case .began, .changed:
-            activePinchRecognizerIDs.insert(recognizerID)
-            backgroundView.discardDetailImage()
+            navigationCompletionTask?.cancel()
+            navigationCompletionTask = nil
+            if activeNavigationRecognizerIDs.insert(recognizerID).inserted {
+                lastSubmittedVisibleFrame = .null
+                backgroundView.discardDetailImage()
+            }
         case .ended, .cancelled:
-            activePinchRecognizerIDs.remove(recognizerID)
-            if activePinchRecognizerIDs.isEmpty {
-                lastObservedVisibleFrame = .null
-                sampleViewport()
+            activeNavigationRecognizerIDs.remove(recognizerID)
+            if activeNavigationRecognizerIDs.isEmpty {
+                renderAfterNavigationSettles(in: recognizer.owningScrollView)
             }
         case .failed:
-            activePinchRecognizerIDs.remove(recognizerID)
+            activeNavigationRecognizerIDs.remove(recognizerID)
         case .possible:
             break
         @unknown default:
-            activePinchRecognizerIDs.remove(recognizerID)
+            activeNavigationRecognizerIDs.remove(recognizerID)
+        }
+    }
+
+    private func renderAfterNavigationSettles(in scrollView: UIScrollView?) {
+        navigationCompletionTask?.cancel()
+        navigationCompletionTask = Task { @MainActor [weak self, weak scrollView] in
+            // Let UIScrollView enter deceleration or zoom-bounce state after
+            // the recognizer's ended callback before checking motion.
+            await Task.yield()
+
+            while !Task.isCancelled {
+                guard let self else { return }
+                guard self.activeNavigationRecognizerIDs.isEmpty else { return }
+
+                let isStillMoving = scrollView.map {
+                    $0.isTracking
+                        || $0.isDragging
+                        || $0.isDecelerating
+                        || $0.isZooming
+                        || $0.isZoomBouncing
+                } ?? false
+                guard isStillMoving else {
+                    self.navigationCompletionTask = nil
+                    self.renderCurrentViewport()
+                    return
+                }
+
+                try? await Task.sleep(nanoseconds: Self.motionCheckNanoseconds)
+            }
         }
     }
 }
@@ -717,7 +743,7 @@ private final class PaperKitPDFPageBackgroundView: UIView {
                 self.baseImageView.image = image
                 self.baseImageIsReady = true
                 self.onStatusChange?(
-                    "전체 페이지 준비 완료 · 확대 영역은 즉시 고해상도로 갱신됩니다.",
+                    "전체 페이지 준비 완료 · 이동이 끝나면 고해상도로 갱신됩니다.",
                     false
                 )
                 self.onBaseImageReady?()
@@ -908,11 +934,25 @@ private extension CGRect {
 }
 
 private extension UIView {
-    var descendantPinchGestureRecognizers: [UIPinchGestureRecognizer] {
-        let localRecognizers = gestureRecognizers?.compactMap {
-            $0 as? UIPinchGestureRecognizer
+    var descendantNavigationGestureRecognizers: [UIGestureRecognizer] {
+        let localRecognizers = gestureRecognizers?.filter {
+            $0 is UIPanGestureRecognizer || $0 is UIPinchGestureRecognizer
         } ?? []
-        return localRecognizers + subviews.flatMap(\.descendantPinchGestureRecognizers)
+        return localRecognizers
+            + subviews.flatMap(\.descendantNavigationGestureRecognizers)
+    }
+}
+
+private extension UIGestureRecognizer {
+    var owningScrollView: UIScrollView? {
+        var candidate = view
+        while let currentView = candidate {
+            if let scrollView = currentView as? UIScrollView {
+                return scrollView
+            }
+            candidate = currentView.superview
+        }
+        return nil
     }
 }
 #endif
