@@ -48,20 +48,36 @@ old version and tag values.
   in `9dfe5e5` and is pushed to `origin/main`. GitHub Actions run `33879002800`
   passed the Xcode 16 fallback build, Xcode 26 normal build, strict Swift 6
   build, and both iPad Simulator jobs. Version record commit `13c0c20` and the
-  annotated `0.1.20` package tag are pushed. Physical iPadOS 26 testing is
-  still pending. The accepted `0.1.19` renderer and its
+  annotated `0.1.20` package tag are pushed. The user reports all numbered
+  `0.1.20` physical checks 1 through 13 passed on iPadOS 26. The accepted
+  `0.1.19` renderer and its
   slower-than-Notability tradeoff are unchanged.
 
 ## In Progress
 
-- `0.1.20` custom-toolbar bridge implementation, Apple CI, documentation, and
-  package tag are complete. Physical Swift Playgrounds compilation and the A/B
-  checklist are not yet complete. Keep the accepted `0.1.19` renderer, PDF
+- `0.1.20` custom-toolbar bridge implementation, Apple CI, package tag, and
+  physical Swift Playgrounds A/B checklist are complete. All numbered checks
+  1 through 13 passed. Keep the accepted `0.1.19` renderer, PDF
   geometry, PaperMarkup storage format, gesture observation, and production
   `StudyCoachRootView()` unchanged. The experiment keeps
   `PKToolPicker` active while switching its responder visibility between
   `.hidden` and `.visible`, following Apple's documented PaperKit pattern, so
   Pencil double tap and squeeze can continue to use the system picker state.
+- The user rejected a cosmetic toolbar that merely mirrors Apple palette
+  choices. For `0.1.21`, `StudyCoachToolStore` must own exact native tool
+  values: 10-step/fine widths, per-tool quick colors, marker azimuth, three
+  eraser modes and widths, and lasso. Apply constructed `PKTool` values through
+  `PaperMarkupViewController.drawingTool`. Use `UIPencilInteraction` directly
+  for double tap and squeeze; do not keep a hidden Apple palette as the
+  production parameter or hardware-event authority. The `0.1.20` picker remains
+  only an isolated Apple/StudyCoach A/B fallback.
+- `docs/TOOLBAR_ARCHITECTURE.md` now records the researched capability split.
+  Text and image use PaperKit structured insertion APIs rather than Apple UI.
+  Freehand dashed/dotted ink has no public `PKInkingTool` pattern property and
+  requires an isolated stroke-processing test. Audio is an AVFAudio/document
+  timeline subsystem and remains after stable document persistence, although
+  its toolbar entry is reserved now. No Swift code or dependency changed in
+  this design-only step.
 - `docs/GOODNOTES_NOTABILITY_FEATURE_MATRIX.md` is the 2026-09-04 public-feature
   baseline for Goodnotes, Notability, and the actual `0.1.19` state. It
   deliberately distinguishes physical-device confirmation from code-only,

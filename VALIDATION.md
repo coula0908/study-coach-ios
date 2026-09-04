@@ -9,6 +9,9 @@
 - PDF display and navigation: passed on physical iPadOS 26; no stutter reported
 - PencilKit behavior: Apple Pencil writing passed on physical iPadOS 26 with `0.1.2`; the user reported that the app launched and handwriting worked correctly
 - PaperKit standalone diagnostic: Xcode 16.4 and Xcode 26.6 CI passed; physical iPadOS 26 launch, writing feel, and high-zoom ink quality passed with `0.1.4`
+- PaperKit custom-toolbar bridge: `0.1.20` passed the user's 13-item physical
+  iPadOS 26 checklist; the minimal StudyCoach controls are accepted as the
+  baseline for fine-grained native tool settings
 - Native PDFKit/PencilKit revision: Xcode 16.4 and Xcode 26.6 builds and iPad
   Simulator tests passed on 2026-09-02; the `0.1.7` physical iPadOS 26 retest
   confirmed the delegate crash is fixed and Apple Pencil writing works, but
@@ -44,10 +47,14 @@ remaining acceptance checks pass in Swift Playgrounds on the target iPad.
 - Windows repository validation: passed
 - Version record commit: `13c0c20ac8591d7e9eb6944b5023cccffc03e4a4`
 - Annotated package tag: `0.1.20` pushed; tag target is the version record commit
-- Physical Swift Playgrounds compilation and iPadOS 26 behavior: pending
-- Required physical evidence: the A/B checklist in
-  `docs/PAPERKIT_PDF_DIAGNOSTIC.md`; CI does not establish Pencil feel,
-  hidden-picker double tap, squeeze, or real toolbar usability
+- Physical Swift Playgrounds compilation and iPadOS 26 behavior: passed
+- User-reported physical result: all 13 checks supplied for `0.1.20`
+  passed, including the StudyCoach tool buttons and the unchanged PaperKit
+  editor behavior covered by that checklist
+- Interpretation: the minimal custom-toolbar bridge is accepted as a stable
+  baseline. This does not establish unimplemented fine-grained width/color,
+  marker-azimuth, eraser-width, lasso, text, image, patterned-ink, or audio
+  behavior.
 
 ## Fixed-scale pan tile cache: 0.1.19
 

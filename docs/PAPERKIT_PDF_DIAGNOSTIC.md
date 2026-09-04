@@ -66,6 +66,12 @@ modes.
 
 ## Version 0.1.20 custom-toolbar A/B checklist
 
+Physical result on 2026-09-04: the user reported that all 13 supplied
+`0.1.20` checks passed. Treat the minimal custom-toolbar bridge as accepted;
+the fine-grained widths, quick colors, marker azimuth, three eraser modes,
+lasso, text, image, patterned ink, and audio remain separate unimplemented
+capabilities described in `TOOLBAR_ARCHITECTURE.md`.
+
 1. Start in **StudyCoach** mode and confirm the Apple palette is not persistently
    visible.
 2. Write with the StudyCoach pen and highlighter and erase with the StudyCoach
