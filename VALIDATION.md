@@ -69,6 +69,7 @@ remaining acceptance checks pass in Swift Playgrounds on the target iPad.
 - Xcode 16 fallback build and iPad Simulator tests: passed
 - Xcode 26 normal build, strict Swift 6 concurrency build, and iPad Simulator
   tests: passed
+- Annotated package tag: `0.1.24`, target commit `e6f375f`, pushed
 - Physical Swift Playgrounds compilation and behavior: pending
 
 ## Compact scrollable toolbox and readable marker: 0.1.23

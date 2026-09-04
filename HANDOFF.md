@@ -34,7 +34,7 @@ old version and tag values.
 - Repository: `https://github.com/coula0908/study-coach-ios`
 - Active local branch: `codex/paperkit-adaptive-background`
 - Remote development branch: `main`
-- Latest installable package tag: `0.1.23`
+- Latest installable package tag: `0.1.24`
 - Latest runtime implementation commit: `879dda5` — persistent document tabs,
   centered primary/context tool rows, width sliders, exact marker azimuth, and
   vector-eraser width correction
@@ -50,6 +50,8 @@ old version and tag values.
   candidate
 - `0.1.23` annotated tag target commit: `9556872` — compact toolbox physical
   test candidate after full Apple CI success
+- `0.1.24` annotated tag target commit: `e6f375f` — document tabs and
+  contextual tool controls physical test candidate after full Apple CI success
 - Package/module: `StudyCoachCore`
 - Production entry point: `StudyCoachRootView()`
 - Current isolated candidate entry point:
@@ -60,8 +62,8 @@ old version and tag values.
   sliders, explicit marker azimuth construction, and a nonzero vector-eraser
   width. Windows validation and GitHub Actions run `33917015064` pass Xcode 16
   fallback, Xcode 26 normal and strict Swift 6 builds, and both iPad Simulator
-  jobs. A package tag and physical iPadOS 26 acceptance are still pending;
-  latest installable tag remains `0.1.23`.
+  jobs. Annotated package tag `0.1.24` points to `e6f375f`; physical iPadOS 26
+  acceptance is still pending.
 
 ## In Progress
 
@@ -82,9 +84,10 @@ old version and tag values.
   dependency is being copied.
 - `0.1.24` implementation commit `879dda5` passes Windows repository
   validation, `git diff --check`, and GitHub Actions run `33917015064`. The
-  immediate next step is to create the package tag, then physically test the
-  tab switching, settings-row toggle, width slider, all three marker angles,
-  and all three eraser modes/ranges without regressing the accepted editor.
+  annotated package tag `0.1.24` is pushed at `e6f375f`. The immediate next
+  step is to physically test tab switching, settings-row toggle, width slider,
+  all three marker angles, and all three eraser modes/ranges without regressing
+  the accepted editor.
 - Physical `0.1.22` launch now passes on iPadOS 26. The user verified every
   implemented tool function and reports that they work, while noting that the
   first launch takes longer than before. The first-frame hotfix is therefore
