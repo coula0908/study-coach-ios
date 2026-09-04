@@ -92,8 +92,8 @@ if ($rootView.Contains('StudyCoachPaperKitDiagnosticView')) {
     throw 'StudyCoachRootView must not route production users into the PaperKit diagnostic.'
 }
 
-if (-not $versionDocument.Contains('Current package version: `0.1.16`')) {
-    throw 'VERSION.md must identify the source tree as package version 0.1.16.'
+if (-not $versionDocument.Contains('Current package version: `0.1.17`')) {
+    throw 'VERSION.md must identify the source tree as package version 0.1.17.'
 }
 
 if ($rootView.Contains('StudyCoachPaperKitPDFDiagnosticView')) {
@@ -110,6 +110,10 @@ foreach ($requiredPaperKitPDFText in @(
     'contentVisibleFrame'
     'viewportMonitoringTask'
     'viewportSampleNanoseconds: UInt64 = 33_000_000'
+    'descendantPinchGestureRecognizers'
+    'observedPinchGestureChanged'
+    'activePinchRecognizerIDs'
+    'discardDetailImage()'
     'detailRenderIsInFlight'
     'pendingDetailRequest'
     'logicalPageScale: CGFloat = 2'

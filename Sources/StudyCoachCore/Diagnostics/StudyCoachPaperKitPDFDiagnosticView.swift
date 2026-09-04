@@ -373,6 +373,8 @@ private final class PaperKitPDFPageViewController: UIViewController {
     private let toolPicker: PKToolPicker
     private var viewportMonitoringTask: Task<Void, Never>?
     private var lastObservedVisibleFrame = CGRect.null
+    private var observedPinchRecognizers: [UIPinchGestureRecognizer] = []
+    private var activePinchRecognizerIDs: Set<ObjectIdentifier> = []
 
     init(
         page: PDFPage,
@@ -489,12 +491,14 @@ private final class PaperKitPDFPageViewController: UIViewController {
         paperController.pencilKitResponderState.activeToolPicker = toolPicker
         paperController.pencilKitResponderState.toolPickerVisibility = .visible
         paperController.becomeFirstResponder()
+        installPinchObservationIfNeeded()
         startViewportMonitoring()
     }
 
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
         stopViewportMonitoring()
+        removePinchObservation()
     }
 
     @objc
@@ -549,6 +553,8 @@ private final class PaperKitPDFPageViewController: UIViewController {
     }
 
     private func sampleViewport() {
+        installPinchObservationIfNeeded()
+
         let visibleFrame = paperController.contentVisibleFrame.standardized
             .intersection(backgroundView.bounds)
         guard visibleFrame.isUsableViewport else { return }
@@ -558,10 +564,56 @@ private final class PaperKitPDFPageViewController: UIViewController {
         }
         lastObservedVisibleFrame = visibleFrame
 
+        guard activePinchRecognizerIDs.isEmpty else {
+            backgroundView.discardDetailImage()
+            return
+        }
+
         backgroundView.requestDetailImage(
             for: visibleFrame,
             viewportSize: paperController.view.bounds.size
         )
+    }
+
+    private func installPinchObservationIfNeeded() {
+        let installedIDs = Set(observedPinchRecognizers.map(ObjectIdentifier.init))
+        let discoveredRecognizers = paperController.view.descendantPinchGestureRecognizers
+            .filter { !installedIDs.contains(ObjectIdentifier($0)) }
+
+        for recognizer in discoveredRecognizers {
+            recognizer.addTarget(self, action: #selector(observedPinchGestureChanged(_:)))
+            observedPinchRecognizers.append(recognizer)
+        }
+    }
+
+    private func removePinchObservation() {
+        for recognizer in observedPinchRecognizers {
+            recognizer.removeTarget(self, action: #selector(observedPinchGestureChanged(_:)))
+        }
+        observedPinchRecognizers.removeAll()
+        activePinchRecognizerIDs.removeAll()
+    }
+
+    @objc
+    private func observedPinchGestureChanged(_ recognizer: UIPinchGestureRecognizer) {
+        let recognizerID = ObjectIdentifier(recognizer)
+        switch recognizer.state {
+        case .began, .changed:
+            activePinchRecognizerIDs.insert(recognizerID)
+            backgroundView.discardDetailImage()
+        case .ended, .cancelled:
+            activePinchRecognizerIDs.remove(recognizerID)
+            if activePinchRecognizerIDs.isEmpty {
+                lastObservedVisibleFrame = .null
+                sampleViewport()
+            }
+        case .failed:
+            activePinchRecognizerIDs.remove(recognizerID)
+        case .possible:
+            break
+        @unknown default:
+            activePinchRecognizerIDs.remove(recognizerID)
+        }
     }
 }
 
@@ -674,10 +726,7 @@ private final class PaperKitPDFPageBackgroundView: UIView {
     }
 
     func requestDetailImage(for visibleFrame: CGRect, viewportSize: CGSize) {
-        detailRenderGeneration += 1
-        pendingDetailRequest = nil
-        detailImageView.isHidden = true
-        detailImageView.image = nil
+        discardDetailImage()
         guard baseImageIsReady,
               visibleFrame.isUsableViewport,
               viewportSize.width > 0,
@@ -710,6 +759,13 @@ private final class PaperKitPDFPageBackgroundView: UIView {
             pixelsPerLogicalPoint: desiredPixelsPerLogicalPoint
         )
         startNextDetailRenderIfNeeded()
+    }
+
+    func discardDetailImage() {
+        detailRenderGeneration += 1
+        pendingDetailRequest = nil
+        detailImageView.isHidden = true
+        detailImageView.image = nil
     }
 
     private func startNextDetailRenderIfNeeded() {
@@ -848,6 +904,15 @@ private extension CGRect {
             && abs(minY - other.minY) <= tolerance
             && abs(width - other.width) <= tolerance
             && abs(height - other.height) <= tolerance
+    }
+}
+
+private extension UIView {
+    var descendantPinchGestureRecognizers: [UIPinchGestureRecognizer] {
+        let localRecognizers = gestureRecognizers?.compactMap {
+            $0 as? UIPinchGestureRecognizer
+        } ?? []
+        return localRecognizers + subviews.flatMap(\.descendantPinchGestureRecognizers)
     }
 }
 #endif

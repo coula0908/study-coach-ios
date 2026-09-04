@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.17 — Render once after pinch ends
+
+- Observe PaperKit's existing UIKit pinch recognizer through target-action
+  without replacing its delegate or adding a competing gesture recognizer.
+- During `.began` and `.changed`, discard obsolete detail output and track the
+  newest visible frame without starting a new high-resolution PDF render.
+- When the pinch reaches `.ended` or `.cancelled`, immediately render the final
+  visible region once.
+- Keep the 33-millisecond frame sampler as a compatibility fallback and for
+  non-pinch viewport changes, while suppressing its render requests for the
+  entire active pinch.
+- Preserve the one-active plus one-latest-pending render bound and the removal
+  of the old 0.3-second debounce.
+
 ## 0.1.16 — Swift Playgrounds viewport compatibility
 
 - Remove the `PaperMarkupViewController.Delegate` conformance because the

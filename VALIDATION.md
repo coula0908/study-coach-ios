@@ -18,6 +18,22 @@
 Do not mark the MVP complete until the native Pencil input path and the
 remaining acceptance checks pass in Swift Playgrounds on the target iPad.
 
+## Pinch-end-only detail rendering: 0.1.17
+
+- Date: 2026-09-04
+- Required behavior: no high-resolution PDF detail render while a two-finger
+  pinch is `.began` or `.changed`, including when both fingers pause on-screen
+- Completion behavior: submit the final visible frame once when the observed
+  existing PaperKit pinch recognizer reaches `.ended` or `.cancelled`
+- Gesture ownership: unchanged; no delegate replacement and no added competing
+  recognizer, only an additional target on recognizers already owned by PaperKit
+- Compatibility fallback: the 33-millisecond main-actor sampler remains, but
+  only records and invalidates detail while any observed pinch is active
+- Fixed post-gesture delay: none
+- Windows repository validation: pending
+- Apple toolchain validation: pending
+- Physical iPadOS 26 acceptance: pending
+
 ## Swift Playgrounds viewport compatibility: 0.1.16
 
 - Date: 2026-09-03

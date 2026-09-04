@@ -8,7 +8,7 @@ The standalone `StudyCoachPaperKitDiagnosticView` passed on the target iPadOS
 26 device. The first PDF diagnostic exposed avoidable custom-renderer costs:
 PDF tiles became visible while pages loaded, the minimum ink width was too
 large, and maximum-zoom input did not preserve the accepted handwriting feel.
-The `0.1.16` diagnostic keeps PaperKit as the sole interaction and markup owner,
+The `0.1.17` diagnostic keeps PaperKit as the sole interaction and markup owner,
 removes `PDFView`, doubles the logical page coordinates, displays a complete
 bounded PDF page image, and atomically replaces only the visible region as pan
 or pinch changes. It remains isolated until the physical iPad acceptance
@@ -113,9 +113,12 @@ production editor. It deliberately uses no `PDFView`:
 4. A complete four-pixels-per-PDF-point image appears atomically at page load,
    subject to a 4096-pixel side and 14-million-pixel allocation bound.
 5. A main-actor task samples PaperKit's visible frame about every 33
-   milliseconds. A detected change immediately requests the visible region plus
-   overscan from the original PDF at device presentation density. There is no
-   fixed post-gesture settle delay. The candidate avoids
+   milliseconds. During an active pinch it tracks changes but does not render.
+   The existing UIKit pinch recognizer is observed by adding a target-action
+   callback without replacing its delegate or adding another recognizer. At
+   `.ended` or `.cancelled`, the final region plus overscan is requested once
+   from the original PDF at device presentation density. There is no fixed
+   post-gesture settle delay. The candidate avoids
    `PaperMarkupViewController.Delegate` because the physical Swift Playgrounds
    SDK rejects that conformance even when the Xcode 26 SDK accepts it.
 6. One detail render may run while one replaceable latest request waits. Stale
