@@ -8,12 +8,36 @@ a dependable study tool quickly. It is not an exercise in building a unique PDF
 engine. Prefer verified Apple APIs, public implementations, and mature renderer
 patterns over new trial-and-error code.
 
+## Handoff maintenance protocol
+
+This is the shared current-state document for Codex, Antigravity, and future
+agents. It must be enough to resume work without a prior conversation. Actual
+working-tree files and Git state are authoritative, followed by current CI,
+this file, validation/version/changelog documents, and only then old agent
+summaries.
+
+Update this file continuously when an implementation starts, a design is
+accepted or rejected, a physical-device result arrives, a root cause is found,
+or a commit, push, CI run, version, tag, validation state, or next step changes.
+Do not defer all updates until the end of the session. Keep it concise and
+current rather than turning it into a transcript, but retain failures that a
+later agent might otherwise repeat.
+
+The continuity protocol was originally maintained in an earlier local
+study-coach workspace. Its last project snapshot ended at `0.1.16` and is now
+historical. Its continuity rules have been incorporated into the actual Swift
+package repository; current code, Git, CI, and the state below supersede its
+old version and tag values.
+
 ## Repository state
 
 - Repository: `https://github.com/coula0908/study-coach-ios`
 - Active local branch: `codex/paperkit-adaptive-background`
 - Remote development branch: `main`
 - Latest device-test tag: `0.1.18`
+- Latest runtime implementation commit: `5816568` — render PDF detail after
+  navigation settles
+- `0.1.18` annotated tag target commit: `be7c890` — Apple validation record
 - Package/module: `StudyCoachCore`
 - Production entry point: `StudyCoachRootView()`
 - Current isolated candidate entry point:
@@ -21,6 +45,17 @@ patterns over new trial-and-error code.
 - `0.1.18` passed the Windows repository checks, Xcode 16.4 fallback build,
   Xcode 26 build, strict Swift 6 build, and iPad Simulator tests. Its physical
   iPadOS 26 interaction result is still pending.
+
+## In Progress
+
+- No runtime implementation is currently in progress.
+- The user requested design discussion only after identifying that `0.1.18`
+  avoids pan-time image swapping but can leave the magnified base PDF blurry
+  during fixed-scale movement.
+- The next renderer direction below has been researched and accepted as the
+  leading candidate, but no source code for it has been written.
+- The immediate next action is to wait for explicit authorization to implement
+  the fixed-scale tile/cache strategy. Do not silently change the viewer.
 
 ## Confirmed physical-device history
 
@@ -148,3 +183,17 @@ On the physical iPadOS 26 device, separately test:
 9. Update this handoff after every meaningful result and before stopping due to
    context, time, or usage limits. State what is confirmed, what failed, what is
    only proposed, the exact latest commit/tag, and the next safe action.
+
+## Evidence boundaries and Git discipline
+
+- Repository and Git state override this document if they conflict.
+- Preserve and inspect unexplained local changes; never reset or clean them just
+  because another agent did not document them.
+- Keep static checks, Apple builds, simulator results, Swift Playgrounds
+  compilation, and physical iPad behavior separate.
+- Do not mark a physical behavior as passed based on CI.
+- Before changing the version or creating a tag, verify `VERSION.md`, HEAD,
+  remote state, existing tags, and the relevant CI result.
+- A Git tag and a GitHub Release are separate objects; report them separately.
+- Update `In Progress`, repository state, CI, tag state, known issues, rejected
+  approaches, and next steps as soon as they materially change.

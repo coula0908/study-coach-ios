@@ -112,3 +112,90 @@ Create these feature folders as implementation files are added; do not keep empt
 - Read `HANDOFF.md` before resuming work. Update it after each meaningful design
   or implementation change and before stopping because of context, time, or
   usage limits, so another AI can continue without reconstructing the history.
+
+## Agent handoff and continuity protocol
+
+This repository may be edited alternately by Codex, Antigravity, or another
+coding agent. The repository itself must be sufficient to resume work without
+access to an earlier conversation or an agent-specific local transcript.
+
+### Source-of-truth order
+
+When reconstructing project state, use this order:
+
+1. Actual files and code in the current working tree.
+2. `git status`, current branch, commits, tags, and remote refs.
+3. Current CI and validation evidence.
+4. `HANDOFF.md`.
+5. `VALIDATION.md`, `VERSION.md`, `CHANGELOG.md`, and other documentation.
+6. Previous agent summaries or conversation transcripts.
+
+Never accept a statement that something was fixed, pushed, tagged, released,
+or physically validated without checking the corresponding evidence. If a
+document conflicts with the repository or Git state, the repository wins and
+the document should be corrected.
+
+### Required startup procedure
+
+Before making code changes in a resumed or new agent session:
+
+1. Read `AGENTS.md`, `HANDOFF.md`, and `VERSION.md`.
+2. Inspect `git status`, the current branch, HEAD, recent relevant commits, and
+   remote state.
+3. Inspect unexplained uncommitted changes and preserve them as potentially
+   intentional work from another agent.
+4. Check the newest CI and validation evidence when relevant.
+5. Reconstruct the current task from repository state before editing.
+
+Never reset, clean, overwrite, or revert unexplained work merely because it is
+not described in the handoff.
+
+### Continuous handoff rule
+
+Do not wait until the end of a session to prepare the handoff. Update
+`HANDOFF.md` whenever the project materially changes, including when:
+
+- a new implementation approach begins;
+- an architecture decision is made, rejected, or disproved;
+- a significant bug or actual root cause is identified;
+- a physical iPad test produces a meaningful result;
+- a version, commit, push, tag, CI run, or validation status changes; or
+- the immediate next safe action changes.
+
+Keep `HANDOFF.md` as a compact current-state document, not a full chronological
+transcript. Preserve only history that constrains future work or prevents a
+failed experiment from being repeated. When substantial work starts, update
+`In Progress` before or alongside the implementation. After commits, pushes,
+CI, tags, and physical tests, update the corresponding state promptly so an
+unexpected usage cutoff does not leave the repository ambiguous.
+
+### Evidence and release discipline
+
+- Keep Windows static validation, Apple compilation, simulator tests, physical
+  Swift Playgrounds compilation, and physical iPad runtime behavior as separate
+  results. None substitutes for another.
+- Never infer physical-device acceptance from CI or a simulator.
+- Before changing `VERSION.md`, creating a tag, or describing a release,
+  inspect the current version, HEAD, remote commit, existing tags, and CI.
+- Git tags and GitHub Release objects are different; state which one exists.
+- Do not create a tag or GitHub Release unless the current user request or
+  already agreed version-testing workflow authorizes that delivery step.
+- Record rejected approaches under `Discarded Approaches and Why`. Retry one
+  only when assumptions materially changed or new evidence explains why the
+  earlier failure should no longer apply.
+
+### End-of-session and cross-agent continuity
+
+Before a natural stop or a known context, time, or usage-limit cutoff, ensure
+`HANDOFF.md` accurately states at least:
+
+- the executive/current-state snapshot;
+- work in progress;
+- known issues and discarded approaches;
+- build, CI, physical-device, Git, and tag state; and
+- precise next steps.
+
+Continue in the same working tree unless the user explicitly asks for another
+copy. A new agent should verify the handoff against Git, briefly tell the user
+what remains in progress, and continue without asking the user to reconstruct
+the prior conversation.
