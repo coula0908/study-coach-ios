@@ -42,6 +42,8 @@ remaining acceptance checks pass in Swift Playgrounds on the target iPad.
 - Xcode 26 normal build, strict Swift 6 concurrency build, and iPad Simulator
   tests: passed
 - Windows repository validation: passed
+- Version record commit: `13c0c20ac8591d7e9eb6944b5023cccffc03e4a4`
+- Annotated package tag: `0.1.20` pushed; tag target is the version record commit
 - Physical Swift Playgrounds compilation and iPadOS 26 behavior: pending
 - Required physical evidence: the A/B checklist in
   `docs/PAPERKIT_PDF_DIAGNOSTIC.md`; CI does not establish Pencil feel,

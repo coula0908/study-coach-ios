@@ -34,10 +34,12 @@ old version and tag values.
 - Repository: `https://github.com/coula0908/study-coach-ios`
 - Active local branch: `codex/paperkit-adaptive-background`
 - Remote development branch: `main`
-- Latest installable package tag: `0.1.19` (the `0.1.20` tag is not created yet)
+- Latest installable package tag: `0.1.20`
 - Latest runtime implementation commit: `9dfe5e5` — isolated custom-toolbar
   bridge over the accepted PaperKit editor
 - `0.1.19` annotated tag target commit: `8ebf8bc` — Apple validation record
+- `0.1.20` annotated tag target commit: `13c0c20` — version record and
+  physical-test instructions
 - Package/module: `StudyCoachCore`
 - Production entry point: `StudyCoachRootView()`
 - Current isolated candidate entry point:
@@ -45,17 +47,17 @@ old version and tag values.
 - Source version `0.1.20` adds the isolated StudyCoach/Apple toolbar A/B bridge
   in `9dfe5e5` and is pushed to `origin/main`. GitHub Actions run `33879002800`
   passed the Xcode 16 fallback build, Xcode 26 normal build, strict Swift 6
-  build, and both iPad Simulator jobs. The `0.1.20` documentation/tag commit
-  and physical iPadOS 26 test are still pending. The accepted `0.1.19`
-  renderer and its slower-than-Notability tradeoff are unchanged.
+  build, and both iPad Simulator jobs. Version record commit `13c0c20` and the
+  annotated `0.1.20` package tag are pushed. Physical iPadOS 26 testing is
+  still pending. The accepted `0.1.19` renderer and its
+  slower-than-Notability tradeoff are unchanged.
 
 ## In Progress
 
-- `0.1.20` custom-toolbar bridge implementation and Apple CI are complete;
-  source/version documentation is being finalized before the installable tag
-  is created. Physical Swift Playgrounds compilation and the A/B checklist are
-  not yet complete. Keep the accepted `0.1.19` renderer, PDF geometry,
-  PaperMarkup storage format, gesture observation, and production
+- `0.1.20` custom-toolbar bridge implementation, Apple CI, documentation, and
+  package tag are complete. Physical Swift Playgrounds compilation and the A/B
+  checklist are not yet complete. Keep the accepted `0.1.19` renderer, PDF
+  geometry, PaperMarkup storage format, gesture observation, and production
   `StudyCoachRootView()` unchanged. The experiment keeps
   `PKToolPicker` active while switching its responder visibility between
   `.hidden` and `.visible`, following Apple's documented PaperKit pattern, so
