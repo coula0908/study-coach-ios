@@ -53,6 +53,14 @@ old version and tag values.
 
 ## In Progress
 
+- `0.1.20` implementation has started as the isolated custom-toolbar bridge
+  milestone. Its allowed scope is the PaperKit PDF diagnostic UI, a small pure
+  tool-selection state model, and focused tests. Keep the accepted `0.1.19`
+  renderer, PDF geometry, PaperMarkup storage format, gesture observation, and
+  production `StudyCoachRootView()` unchanged. The required experiment keeps
+  `PKToolPicker` active while switching its responder visibility between
+  `.hidden` and `.visible`, following Apple's documented PaperKit pattern, so
+  Pencil double tap and squeeze can continue to use the system picker state.
 - `docs/GOODNOTES_NOTABILITY_FEATURE_MATRIX.md` is the 2026-09-04 public-feature
   baseline for Goodnotes, Notability, and the actual `0.1.19` state. It
   deliberately distinguishes physical-device confirmation from code-only,

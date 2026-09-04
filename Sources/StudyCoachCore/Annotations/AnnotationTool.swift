@@ -2,7 +2,7 @@ import PencilKit
 import SwiftUI
 import UIKit
 
-enum AnnotationTool: String, CaseIterable, Identifiable {
+enum AnnotationTool: String, CaseIterable, Codable, Hashable, Identifiable, Sendable {
     case pen
     case highlighter
     case eraser

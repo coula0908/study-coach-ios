@@ -13,6 +13,7 @@ $requiredPaths = @(
     'Sources\StudyCoachCore\PDF\PDFKitContainerView.swift'
     'Sources\StudyCoachCore\PDF\PDFWorkspaceView.swift'
     'Sources\StudyCoachCore\Annotations\PencilPageCanvasView.swift'
+    'Sources\StudyCoachCore\Annotations\StudyCoachToolPaletteState.swift'
     'Sources\StudyCoachCore\Annotations\PencilPageInkPresentation.swift'
     'Sources\StudyCoachCore\Annotations\PencilDrawingRenderView.swift'
     'Sources\StudyCoachCore\Persistence\StudyCoachDocumentStore.swift'
@@ -129,6 +130,10 @@ foreach ($requiredPaperKitPDFText in @(
     'PaperMarkup(dataRepresentation:'
     'dataRepresentation()'
     'pageIndex: Int'
+    'toolPicker.addObserver(self)'
+    'toolPickerSelectedToolItemDidChange'
+    'toolPickerVisibility = .hidden'
+    'selectedToolItem = item'
 )) {
     if (-not $paperKitPDFDiagnostic.Contains($requiredPaperKitPDFText)) {
         throw "PaperKit PDF diagnostic is missing: $requiredPaperKitPDFText"

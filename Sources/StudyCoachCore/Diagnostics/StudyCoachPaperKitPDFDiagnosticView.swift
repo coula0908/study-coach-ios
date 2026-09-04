@@ -299,6 +299,49 @@ private struct PaperKitPDFDiagnosticWorkspace: View {
             .buttonStyle(.bordered)
             .controlSize(.small)
 
+            if model.document != nil {
+                ScrollView(.horizontal, showsIndicators: false) {
+                    HStack(spacing: 8) {
+                        Picker(
+                            "도구 UI",
+                            selection: Binding(
+                                get: { proxy.paletteState.showsApplePalette },
+                                set: { proxy.setApplePaletteVisible($0) }
+                            )
+                        ) {
+                            Text("StudyCoach").tag(false)
+                            Text("Apple").tag(true)
+                        }
+                        .pickerStyle(.segmented)
+                        .frame(width: 210)
+
+                        Divider()
+                            .frame(height: 24)
+
+                        toolButton(.pen)
+                        toolButton(.highlighter)
+                        toolButton(.eraser)
+
+                        Divider()
+                            .frame(height: 24)
+
+                        Button {
+                            proxy.undo()
+                        } label: {
+                            Label("실행 취소", systemImage: "arrow.uturn.backward")
+                        }
+
+                        Button {
+                            proxy.redo()
+                        } label: {
+                            Label("다시 실행", systemImage: "arrow.uturn.forward")
+                        }
+                    }
+                    .buttonStyle(.bordered)
+                    .controlSize(.small)
+                }
+            }
+
             Text(proxy.statusMessage)
                 .font(.footnote)
                 .foregroundStyle(proxy.statusIsError ? .red : .secondary)
@@ -308,17 +351,70 @@ private struct PaperKitPDFDiagnosticWorkspace: View {
         .padding(.vertical, 8)
         .background(Color(uiColor: .systemBackground))
     }
+
+    private func toolButton(_ tool: AnnotationTool) -> some View {
+        let isSelected = proxy.paletteState.selectedTool == tool
+
+        return Button {
+            proxy.selectTool(tool)
+        } label: {
+            Label(tool.title, systemImage: tool.systemImage)
+        }
+        .buttonStyle(.bordered)
+        .tint(isSelected ? Color.accentColor : Color.gray)
+        .background(
+            isSelected ? Color.accentColor.opacity(0.15) : Color.clear,
+            in: Capsule()
+        )
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
 }
 
 @available(iOS 26.0, *)
 @MainActor
 private final class PaperKitPDFDiagnosticProxy: ObservableObject {
-    @Published var statusMessage = "PDF를 열고 시스템 필기 도구로 페이지 위에 써 보세요."
+    @Published var statusMessage = "StudyCoach 도구와 Apple 도구를 번갈아 같은 필기감인지 확인하세요."
     @Published var statusIsError = false
-    weak var controller: PaperKitPDFPageViewController?
+    @Published private(set) var paletteState = StudyCoachToolPaletteState()
+    private weak var controller: PaperKitPDFPageViewController?
+
+    func attach(_ controller: PaperKitPDFPageViewController) {
+        self.controller = controller
+        controller.applyPaletteState(paletteState)
+    }
 
     func save() {
         controller?.saveMarkup()
+    }
+
+    func selectTool(_ tool: AnnotationTool) {
+        var nextState = paletteState
+        nextState.select(tool)
+        paletteState = nextState
+        controller?.selectTool(tool)
+    }
+
+    func reflectSystemSelection(_ tool: AnnotationTool) {
+        guard paletteState.selectedTool != tool else { return }
+        var nextState = paletteState
+        nextState.reflectSystemSelection(tool)
+        paletteState = nextState
+    }
+
+    func setApplePaletteVisible(_ isVisible: Bool) {
+        guard paletteState.showsApplePalette != isVisible else { return }
+        var nextState = paletteState
+        nextState.setApplePaletteVisible(isVisible)
+        paletteState = nextState
+        controller?.setApplePaletteVisible(isVisible)
+    }
+
+    func undo() {
+        controller?.undoMarkup()
+    }
+
+    func redo() {
+        controller?.redoMarkup()
     }
 }
 
@@ -336,7 +432,7 @@ private struct PaperKitPDFPageContainer: UIViewControllerRepresentable {
             pageIndex: pageIndex,
             proxy: proxy
         )
-        proxy.controller = controller
+        proxy.attach(controller)
         return controller
     }
 
@@ -344,7 +440,7 @@ private struct PaperKitPDFPageContainer: UIViewControllerRepresentable {
         _ uiViewController: PaperKitPDFPageViewController,
         context: Context
     ) {
-        proxy.controller = uiViewController
+        proxy.attach(uiViewController)
     }
 
     static func dismantleUIViewController(
@@ -371,6 +467,7 @@ private final class PaperKitPDFPageViewController: UIViewController {
     private let paperController: PaperMarkupViewController
     private let backgroundView: PaperKitPDFPageBackgroundView
     private let toolPicker: PKToolPicker
+    private let customToolItems: [AnnotationTool: PKToolPickerItem]
     private var navigationCompletionTask: Task<Void, Never>?
     private var lastSubmittedVisibleFrame = CGRect.null
     private var lastViewportSize = CGSize.zero
@@ -433,9 +530,16 @@ private final class PaperKitPDFPageViewController: UIViewController {
             width: 2,
             identifier: "com.studycoach.paperkit.thin-highlighter"
         )
-        toolPicker = PKToolPicker(
-            toolItems: [thinPen, thinHighlighter] + PKToolPicker().toolItems
-        )
+        let defaultToolItems = PKToolPicker().toolItems
+        toolPicker = PKToolPicker(toolItems: [thinPen, thinHighlighter] + defaultToolItems)
+        var configuredToolItems: [AnnotationTool: PKToolPickerItem] = [
+            .pen: thinPen,
+            .highlighter: thinHighlighter,
+        ]
+        if let eraser = defaultToolItems.first(where: { $0 is PKToolPickerEraserItem }) {
+            configuredToolItems[.eraser] = eraser
+        }
+        customToolItems = configuredToolItems
         super.init(nibName: nil, bundle: nil)
     }
 
@@ -455,8 +559,9 @@ private final class PaperKitPDFPageViewController: UIViewController {
         toolPicker.showsDrawingPolicyControls = false
         toolPicker.stateAutosaveName = "StudyCoachCore.PaperKitPDFAdaptive.Tools"
         toolPicker.addObserver(paperController)
+        toolPicker.addObserver(self)
         paperController.pencilKitResponderState.activeToolPicker = toolPicker
-        paperController.pencilKitResponderState.toolPickerVisibility = .visible
+        paperController.pencilKitResponderState.toolPickerVisibility = .hidden
 
         backgroundView.onStatusChange = { [weak self] message, isError in
             self?.proxy?.statusMessage = message
@@ -486,12 +591,14 @@ private final class PaperKitPDFPageViewController: UIViewController {
             name: UIApplication.didEnterBackgroundNotification,
             object: nil
         )
+
+        proxy?.attach(self)
     }
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
         paperController.pencilKitResponderState.activeToolPicker = toolPicker
-        paperController.pencilKitResponderState.toolPickerVisibility = .visible
+        applyPaletteState(proxy?.paletteState ?? StudyCoachToolPaletteState())
         paperController.becomeFirstResponder()
         installNavigationObservationIfNeeded()
         updateCurrentViewportTiles()
@@ -543,6 +650,56 @@ private final class PaperKitPDFPageViewController: UIViewController {
                 proxy?.statusIsError = true
             }
         }
+    }
+
+    func applyPaletteState(_ state: StudyCoachToolPaletteState) {
+        selectTool(state.selectedTool)
+        setApplePaletteVisible(state.showsApplePalette)
+    }
+
+    func selectTool(_ tool: AnnotationTool) {
+        guard let item = customToolItems[tool] else {
+            proxy?.statusMessage = "이 iPad의 시스템 도구 목록에서 \(tool.title)을 찾지 못했습니다."
+            proxy?.statusIsError = true
+            return
+        }
+
+        if toolPicker.selectedToolItem.identifier != item.identifier {
+            toolPicker.selectedToolItem = item
+        }
+        if viewIfLoaded?.window != nil {
+            paperController.becomeFirstResponder()
+        }
+        proxy?.reflectSystemSelection(tool)
+    }
+
+    func setApplePaletteVisible(_ isVisible: Bool) {
+        paperController.pencilKitResponderState.activeToolPicker = toolPicker
+        paperController.pencilKitResponderState.toolPickerVisibility = isVisible ? .visible : .hidden
+        if viewIfLoaded?.window != nil {
+            paperController.becomeFirstResponder()
+        }
+    }
+
+    func undoMarkup() {
+        guard paperController.undoManager?.canUndo == true else { return }
+        paperController.undoManager?.undo()
+    }
+
+    func redoMarkup() {
+        guard paperController.undoManager?.canRedo == true else { return }
+        paperController.undoManager?.redo()
+    }
+
+    private func annotationTool(for item: PKToolPickerItem) -> AnnotationTool? {
+        if item is PKToolPickerEraserItem {
+            return .eraser
+        }
+
+        guard let inkingItem = item as? PKToolPickerInkingItem else {
+            return nil
+        }
+        return inkingItem.inkingTool.inkType == .marker ? .highlighter : .pen
     }
 
     private func updateCurrentViewportTiles() {
@@ -686,6 +843,14 @@ private final class PaperKitPDFPageViewController: UIViewController {
                 try? await Task.sleep(nanoseconds: Self.motionCheckNanoseconds)
             }
         }
+    }
+}
+
+@available(iOS 26.0, *)
+extension PaperKitPDFPageViewController: PKToolPickerObserver {
+    func toolPickerSelectedToolItemDidChange(_ toolPicker: PKToolPicker) {
+        guard let tool = annotationTool(for: toolPicker.selectedToolItem) else { return }
+        proxy?.reflectSystemSelection(tool)
     }
 }
 

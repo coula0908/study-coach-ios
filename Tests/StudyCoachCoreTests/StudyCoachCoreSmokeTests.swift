@@ -10,6 +10,35 @@ import PaperKit
 
 @MainActor
 final class StudyCoachCoreSmokeTests: XCTestCase {
+    func testCustomToolPaletteDefaultsToPenWithApplePaletteHidden() {
+        let state = StudyCoachToolPaletteState()
+
+        XCTAssertEqual(state.selectedTool, .pen)
+        XCTAssertFalse(state.showsApplePalette)
+    }
+
+    func testCustomToolPaletteTracksAppAndSystemSelections() {
+        var state = StudyCoachToolPaletteState()
+
+        state.select(.highlighter)
+        XCTAssertEqual(state.selectedTool, .highlighter)
+
+        state.reflectSystemSelection(.eraser)
+        XCTAssertEqual(state.selectedTool, .eraser)
+    }
+
+    func testChangingPaletteVisibilityDoesNotChangeSelectedTool() {
+        var state = StudyCoachToolPaletteState(selectedTool: .highlighter)
+
+        state.setApplePaletteVisible(true)
+        XCTAssertTrue(state.showsApplePalette)
+        XCTAssertEqual(state.selectedTool, .highlighter)
+
+        state.setApplePaletteVisible(false)
+        XCTAssertFalse(state.showsApplePalette)
+        XCTAssertEqual(state.selectedTool, .highlighter)
+    }
+
     func testRootViewCanBeCreated() {
         _ = StudyCoachRootView()
     }
