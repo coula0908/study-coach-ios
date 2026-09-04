@@ -53,6 +53,14 @@ old version and tag values.
 
 ## In Progress
 
+- `docs/GOODNOTES_NOTABILITY_FEATURE_MATRIX.md` is the 2026-09-04 public-feature
+  baseline for Goodnotes, Notability, and the actual `0.1.19` state. It
+  deliberately distinguishes physical-device confirmation from code-only,
+  older-root-only, buggy, and missing behavior. The user postponed reviewing
+  toolbar state design, PDF geometry design, and implementation ordering to a
+  later turn. `docs/TOOLBAR_ARCHITECTURE.md` and
+  `docs/PDF_PAGE_GEOMETRY.md` are retained only as explicitly marked,
+  unapproved working drafts; do not implement from them before that review.
 - Renderer work is frozen at `0.1.19`: do not resume zoom/pan rendering
   optimization unless a new correctness, crash, or clearly unusable problem is
   reported. The accepted tradeoff is that sharpening is slower than Notability

@@ -56,6 +56,7 @@ Tests/
   StudyCoachCoreTests/
 docs/
   ARCHITECTURE.md
+  GOODNOTES_NOTABILITY_FEATURE_MATRIX.md
   PAPERKIT_DIAGNOSTIC.md
 AGENTS.md
 HANDOFF.md
@@ -109,6 +110,11 @@ struct ContentView: View {
 - Never commit API keys, tokens, personal PDFs, drawings, or other private study data.
 
 Read [the architecture contract](docs/ARCHITECTURE.md) before implementing the viewer or storage layer. Record all device verification in [the validation log](VALIDATION.md).
+
+The current Goodnotes/Notability feature baseline and the precise distinction
+between physical-device results, implemented-but-unverified behavior, partial
+support, and missing features are recorded in the
+[feature comparison matrix](docs/GOODNOTES_NOTABILITY_FEATURE_MATRIX.md).
 
 ## Host limitation
 
