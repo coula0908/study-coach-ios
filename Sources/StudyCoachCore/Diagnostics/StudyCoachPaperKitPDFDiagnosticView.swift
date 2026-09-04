@@ -304,53 +304,46 @@ private struct PaperKitPDFDiagnosticWorkspace: View {
     }
 
     private var toolbar: some View {
-        VStack(spacing: 8) {
+        VStack(spacing: 5) {
             documentBar
 
             if model.document != nil {
-                toolDock
-                if proxy.paletteState.isContextPanelExpanded {
-                    contextTray
-                        .transition(.move(edge: .top).combined(with: .opacity))
-                }
+                compactToolbox
             }
 
             if proxy.statusIsError {
                 Label(proxy.statusMessage, systemImage: "exclamationmark.triangle.fill")
                     .font(.caption)
                     .foregroundStyle(.red)
-                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, 10)
+                    .padding(.vertical, 5)
+                    .background(.regularMaterial, in: Capsule())
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.top, 10)
-        .padding(.bottom, 9)
-        .background(.ultraThinMaterial)
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, 12)
+        .padding(.vertical, 6)
         .animation(.snappy(duration: 0.2), value: proxy.paletteState.selectedTool)
     }
 
     private var documentBar: some View {
-        HStack(spacing: 10) {
+        HStack(spacing: 5) {
             Button {
                 isShowingPDFImporter = true
             } label: {
-                HStack(spacing: 9) {
+                HStack(spacing: 6) {
                     Image(systemName: "folder.fill")
                         .foregroundStyle(Color.accentColor)
-                    VStack(alignment: .leading, spacing: 1) {
-                        Text(model.document == nil ? "PDF 열기" : model.documentName)
-                            .font(.subheadline.weight(.semibold))
-                            .lineLimit(1)
-                        Text(model.document == nil ? "새 학습 문서를 선택하세요" : "StudyCoach 문서")
-                            .font(.caption2)
-                            .foregroundStyle(.secondary)
-                    }
+                    Text(model.document == nil ? "PDF" : model.documentName)
+                        .font(.subheadline.weight(.semibold))
+                        .lineLimit(1)
                 }
             }
             .buttonStyle(.plain)
-            .frame(maxWidth: 320, alignment: .leading)
+            .accessibilityLabel("PDF 열기")
+            .frame(maxWidth: 250, alignment: .leading)
 
-            Spacer(minLength: 6)
+            Spacer(minLength: 2)
 
             HStack(spacing: 4) {
                 compactIconButton("chevron.left", label: "이전 페이지") {
@@ -369,76 +362,49 @@ private struct PaperKitPDFDiagnosticWorkspace: View {
                 }
                 .disabled(model.pageIndex + 1 >= model.pageCount)
             }
-            .padding(.horizontal, 4)
-            .padding(.vertical, 3)
-            .background(.thinMaterial, in: Capsule())
 
             compactIconButton("arrow.uturn.backward", label: "실행 취소") { proxy.undo() }
             compactIconButton("arrow.uturn.forward", label: "다시 실행") { proxy.redo() }
             compactIconButton("square.and.arrow.down", label: "저장") { proxy.save() }
                 .disabled(model.document == nil)
         }
-    }
-
-    private var toolDock: some View {
-        HStack(spacing: 5) {
-            ForEach(StudyCoachPaletteTool.allCases) { tool in
-                toolDockButton(tool)
-            }
-
-            Spacer(minLength: 4)
-
-            Button {
-                proxy.setContextPanelExpanded(!proxy.paletteState.isContextPanelExpanded)
-            } label: {
-                Image(systemName: proxy.paletteState.isContextPanelExpanded
-                    ? "chevron.up.circle.fill"
-                    : "chevron.down.circle.fill")
-                    .font(.title3)
-                    .foregroundStyle(.secondary)
-                    .frame(width: 38, height: 44)
-            }
-            .buttonStyle(.plain)
-            .accessibilityLabel(proxy.paletteState.isContextPanelExpanded ? "도구 설정 접기" : "도구 설정 펼치기")
-        }
-        .padding(5)
-        .background(.regularMaterial, in: RoundedRectangle(cornerRadius: 16, style: .continuous))
+        .padding(.horizontal, 8)
+        .padding(.vertical, 4)
+        .frame(maxWidth: 920)
+        .background(.ultraThinMaterial, in: Capsule())
         .overlay {
-            RoundedRectangle(cornerRadius: 16, style: .continuous)
+            Capsule()
                 .stroke(Color.primary.opacity(0.07), lineWidth: 1)
         }
     }
 
-    private func toolDockButton(_ tool: StudyCoachPaletteTool) -> some View {
-        let isSelected = proxy.paletteState.selectedTool == tool
+    private var compactToolbox: some View {
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 4) {
+                ForEach(StudyCoachPaletteTool.allCases) { tool in
+                    toolButton(tool)
+                }
 
-        return Button {
-            proxy.selectTool(tool)
-        } label: {
-            VStack(spacing: 3) {
-                Image(systemName: tool.systemImage)
-                    .font(.system(size: 18, weight: .semibold))
-                    .frame(width: 30, height: 22)
-                Text(tool.title)
-                    .font(.caption2.weight(.medium))
-                    .lineLimit(1)
+                Divider()
+                    .frame(height: 26)
+                    .padding(.horizontal, 3)
+
+                activeToolControls
             }
-            .foregroundStyle(isSelected ? Color.accentColor : Color.primary.opacity(0.75))
-            .frame(minWidth: 58, minHeight: 46)
-            .background(
-                isSelected ? Color.accentColor.opacity(0.14) : Color.clear,
-                in: RoundedRectangle(cornerRadius: 12, style: .continuous)
-            )
         }
-        .buttonStyle(.plain)
-        .accessibilityAddTraits(isSelected ? .isSelected : [])
+        .contentMargins(.horizontal, 5, for: .scrollContent)
+        .frame(maxWidth: 920, minHeight: 44, maxHeight: 44)
+        .background(.regularMaterial, in: Capsule())
+        .overlay {
+            Capsule().stroke(Color.primary.opacity(0.08), lineWidth: 1)
+        }
     }
 
     @ViewBuilder
-    private var contextTray: some View {
+    private var activeToolControls: some View {
         switch proxy.paletteState.selectedTool {
         case .pen:
-            inkContextTray(
+            inlineInkControls(
                 color: proxy.paletteState.penColor,
                 colors: proxy.paletteState.penColors,
                 selectedColorSlot: proxy.paletteState.selectedPenColorSlot,
@@ -449,8 +415,8 @@ private struct PaperKitPDFDiagnosticWorkspace: View {
                 replaceColor: proxy.replaceSelectedPenColor
             )
         case .highlighter:
-            HStack(spacing: 16) {
-                inkContextTray(
+            Group {
+                inlineInkControls(
                     color: proxy.paletteState.highlighterColor,
                     colors: proxy.paletteState.highlighterColors,
                     selectedColorSlot: proxy.paletteState.selectedHighlighterColorSlot,
@@ -460,74 +426,84 @@ private struct PaperKitPDFDiagnosticWorkspace: View {
                     selectColor: proxy.selectHighlighterColor,
                     replaceColor: proxy.replaceSelectedHighlighterColor
                 )
-                Divider().frame(height: 42)
-                VStack(alignment: .leading, spacing: 5) {
-                    Text("펜촉 각도")
-                        .font(.caption2)
-                        .foregroundStyle(.secondary)
-                    HStack(spacing: 5) {
-                        ForEach(Array(StudyCoachToolPaletteState.highlighterAzimuths.indices), id: \.self) { index in
-                            let degrees = ["0°", "45°", "90°"][index]
-                            compactChoiceButton(
-                                degrees,
-                                isSelected: proxy.paletteState.highlighterAzimuthIndex == index
-                            ) { proxy.setHighlighterAzimuthIndex(index) }
-                        }
-                    }
+                toolDivider
+                Image(systemName: "circle.lefthalf.filled")
+                    .foregroundStyle(.secondary)
+                    .accessibilityHidden(true)
+                Slider(
+                    value: Binding(
+                        get: { proxy.paletteState.highlighterOpacity },
+                        set: proxy.setHighlighterOpacity
+                    ),
+                    in: 0.10...0.80,
+                    step: 0.05
+                )
+                .frame(width: 96)
+                .tint(Color(proxy.paletteState.highlighterColor))
+                .accessibilityLabel("형광펜 투명도")
+                .accessibilityValue(
+                    "\(Int((proxy.paletteState.highlighterOpacity * 100).rounded()))퍼센트"
+                )
+                toolDivider
+                ForEach(Array(StudyCoachToolPaletteState.highlighterAzimuths.indices), id: \.self) { index in
+                    angleButton(index)
                 }
             }
         case .eraser:
-            eraserContextTray
-        case .lasso:
-            contextHint(icon: "lasso", title: "올가미", detail: "Apple Pencil로 영역을 둘러싸 선택하고 이동하거나 크기를 조절하세요.")
-        case .text:
-            HStack {
-                contextHint(icon: "character.cursor.ibeam", title: "텍스트", detail: "현재 화면 중앙에 편집 가능한 텍스트 상자를 추가합니다.")
-                Spacer()
-                Button("텍스트 상자 추가", systemImage: "plus") {
-                    draftText = ""
-                    isShowingTextEditor = true
-                }
-                .buttonStyle(.borderedProminent)
+            ForEach(StudyCoachPaletteEraserMode.allCases) { mode in
+                compactChoiceIconButton(
+                    mode.systemImage,
+                    label: mode.title,
+                    isSelected: proxy.paletteState.eraserMode == mode
+                ) { proxy.setEraserMode(mode) }
             }
-        case .image:
-            HStack {
-                contextHint(icon: "photo.on.rectangle.angled", title: "이미지", detail: "원본 픽셀을 유지해 현재 화면 중앙에 배치합니다.")
-                Spacer()
-                Button("사진", systemImage: "photo") { isShowingPhotoPicker = true }
-                    .buttonStyle(.borderedProminent)
-                Button("파일", systemImage: "folder") { isShowingImageImporter = true }
-                    .buttonStyle(.bordered)
-            }
-        }
-    }
-
-    private var eraserContextTray: some View {
-        HStack(spacing: 18) {
-            VStack(alignment: .leading, spacing: 5) {
-                Text("지우개 방식")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                HStack(spacing: 5) {
-                    ForEach(StudyCoachPaletteEraserMode.allCases) { mode in
-                        compactChoiceButton(mode.title, isSelected: proxy.paletteState.eraserMode == mode) {
-                            proxy.setEraserMode(mode)
-                        }
-                    }
-                }
-            }
-            Divider().frame(height: 42)
-            widthSelector(
+            toolDivider
+            inlineWidthSelector(
                 widths: StudyCoachToolPaletteState.eraserWidths,
                 selectedLevel: proxy.paletteState.eraserWidthLevel,
                 color: .primary,
                 select: proxy.setEraserWidthLevel
             )
+        case .lasso:
+            EmptyView()
+        case .text:
+            compactChoiceIconButton(
+                "plus",
+                label: "텍스트 상자 추가",
+                isSelected: true
+            ) {
+                draftText = ""
+                isShowingTextEditor = true
+            }
+        case .image:
+            compactChoiceIconButton("photo", label: "사진에서 이미지 추가", isSelected: true) {
+                isShowingPhotoPicker = true
+            }
+            compactChoiceIconButton("folder", label: "파일에서 이미지 추가", isSelected: false) {
+                isShowingImageImporter = true
+            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func inkContextTray(
+    private func toolButton(_ tool: StudyCoachPaletteTool) -> some View {
+        let isSelected = proxy.paletteState.selectedTool == tool
+
+        return compactChoiceIconButton(
+            tool.systemImage,
+            label: tool.title,
+            isSelected: isSelected
+        ) { proxy.selectTool(tool) }
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    @ViewBuilder
+    private var toolDivider: some View {
+        Divider()
+            .frame(height: 26)
+            .padding(.horizontal, 3)
+    }
+
+    private func inlineInkControls(
         color: StudyCoachRGBAColor,
         colors: [StudyCoachRGBAColor],
         selectedColorSlot: Int,
@@ -537,125 +513,123 @@ private struct PaperKitPDFDiagnosticWorkspace: View {
         selectColor: @escaping (Int) -> Void,
         replaceColor: @escaping (StudyCoachRGBAColor) -> Void
     ) -> some View {
-        HStack(spacing: 16) {
-            widthSelector(
+        Group {
+            inlineWidthSelector(
                 widths: widths,
                 selectedLevel: selectedWidthLevel,
                 color: Color(color),
                 select: selectWidth
             )
-            Divider().frame(height: 42)
-            VStack(alignment: .leading, spacing: 5) {
-                Text("빠른 색상")
-                    .font(.caption2)
-                    .foregroundStyle(.secondary)
-                HStack(spacing: 8) {
-                    ForEach(Array(colors.indices), id: \.self) { index in
-                        Button { selectColor(index) } label: {
-                            Circle()
-                                .fill(Color(colors[index]))
-                                .frame(width: 24, height: 24)
-                                .overlay {
-                                    Circle().stroke(.white, lineWidth: 2)
-                                }
-                                .overlay {
-                                    Circle().stroke(
-                                        selectedColorSlot == index ? Color.accentColor : Color.primary.opacity(0.12),
-                                        lineWidth: selectedColorSlot == index ? 3 : 1
-                                    )
-                                    .padding(-3)
-                                }
+            toolDivider
+            ForEach(Array(colors.indices), id: \.self) { index in
+                Button { selectColor(index) } label: {
+                    Circle()
+                        .fill(Color(colors[index]))
+                        .frame(width: 21, height: 21)
+                        .overlay { Circle().stroke(.white.opacity(0.9), lineWidth: 1.5) }
+                        .overlay {
+                            Circle().stroke(
+                                selectedColorSlot == index
+                                    ? Color.accentColor
+                                    : Color.primary.opacity(0.12),
+                                lineWidth: selectedColorSlot == index ? 2.5 : 1
+                            )
+                            .padding(-3)
                         }
-                        .buttonStyle(.plain)
-                        .accessibilityLabel("색상 \(index + 1)")
+                        .frame(width: 30, height: 34)
                     }
-                    ColorPicker(
-                        "색상 편집",
-                        selection: Binding(
-                            get: { Color(color) },
-                            set: { replaceColor(StudyCoachRGBAColor($0)) }
-                        ),
-                        supportsOpacity: false
-                    )
-                    .labelsHidden()
-                    .frame(width: 30, height: 30)
                 }
+                .buttonStyle(.plain)
+                .accessibilityLabel("빠른 색상 \(index + 1)")
             }
+            ColorPicker(
+                "색상 편집",
+                selection: Binding(
+                    get: { Color(color) },
+                    set: { replaceColor(StudyCoachRGBAColor($0)) }
+                ),
+                supportsOpacity: false
+            )
+            .labelsHidden()
+            .frame(width: 30, height: 34)
+            .accessibilityLabel("선택 색상 편집")
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func widthSelector(
+    private func inlineWidthSelector(
         widths: [Double],
         selectedLevel: Int,
         color: Color,
         select: @escaping (Int) -> Void
     ) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text("굵기 \(selectedLevel + 1) / 10 · \(widths[selectedLevel].formatted(.number.precision(.fractionLength(0...2))))")
-                .font(.caption2)
-                .foregroundStyle(.secondary)
-            HStack(spacing: 5) {
-                ForEach(Array(widths.indices), id: \.self) { index in
-                    Button { select(index) } label: {
-                        Circle()
-                            .fill(color)
-                            .frame(
-                                width: widthPreviewDiameter(index: index, count: widths.count),
-                                height: widthPreviewDiameter(index: index, count: widths.count)
-                            )
-                            .frame(width: 25, height: 25)
-                            .background(
-                                selectedLevel == index ? Color.accentColor.opacity(0.16) : Color.clear,
-                                in: Circle()
-                            )
-                            .overlay {
-                                if selectedLevel == index {
-                                    Circle().stroke(Color.accentColor, lineWidth: 1.5)
-                                }
-                            }
+        ForEach(Array(widths.indices), id: \.self) { index in
+            Button { select(index) } label: {
+                Circle()
+                    .fill(color)
+                    .frame(
+                        width: widthPreviewDiameter(index: index, count: widths.count),
+                        height: widthPreviewDiameter(index: index, count: widths.count)
+                    )
+                    .frame(width: 27, height: 34)
+                    .background(
+                        selectedLevel == index ? Color.accentColor.opacity(0.15) : Color.clear,
+                        in: Circle()
+                    )
+                    .overlay {
+                        if selectedLevel == index {
+                            Circle().stroke(Color.accentColor, lineWidth: 1.5)
+                                .frame(width: 26, height: 26)
+                        }
                     }
-                    .buttonStyle(.plain)
-                    .accessibilityLabel("굵기 \(index + 1)")
-                }
             }
+            .buttonStyle(.plain)
+            .accessibilityLabel("굵기 \(index + 1)")
+            .accessibilityValue(
+                widths[index].formatted(.number.precision(.fractionLength(0...1)))
+            )
         }
     }
 
     private func widthPreviewDiameter(index: Int, count: Int) -> CGFloat {
-        3 + (CGFloat(index) / CGFloat(max(count - 1, 1))) * 13
+        3 + (CGFloat(index) / CGFloat(max(count - 1, 1))) * 14
     }
 
-    private func compactChoiceButton(
-        _ title: String,
-        isSelected: Bool,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(action: action) {
-            Text(title)
-                .font(.caption.weight(.medium))
+    private func angleButton(_ index: Int) -> some View {
+        let labels = ["0°", "45°", "90°"]
+        let isSelected = proxy.paletteState.highlighterAzimuthIndex == index
+
+        return Button { proxy.setHighlighterAzimuthIndex(index) } label: {
+            Text(labels[index])
+                .font(.caption2.weight(.semibold))
+                .frame(width: 34, height: 30)
                 .foregroundStyle(isSelected ? Color.accentColor : Color.primary)
-                .padding(.horizontal, 10)
-                .frame(height: 30)
                 .background(
-                    isSelected ? Color.accentColor.opacity(0.14) : Color.primary.opacity(0.05),
+                    isSelected ? Color.accentColor.opacity(0.14) : Color.clear,
                     in: Capsule()
                 )
         }
         .buttonStyle(.plain)
+        .accessibilityLabel("형광펜 각도 \(labels[index])")
     }
 
-    private func contextHint(icon: String, title: String, detail: String) -> some View {
-        HStack(spacing: 10) {
-            Image(systemName: icon)
-                .font(.title3)
-                .foregroundStyle(Color.accentColor)
-                .frame(width: 30)
-            VStack(alignment: .leading, spacing: 1) {
-                Text(title).font(.subheadline.weight(.semibold))
-                Text(detail).font(.caption).foregroundStyle(.secondary)
-            }
+    private func compactChoiceIconButton(
+        _ systemImage: String,
+        label: String,
+        isSelected: Bool,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(action: action) {
+            Image(systemName: systemImage)
+                .font(.system(size: 17, weight: .semibold))
+                .foregroundStyle(isSelected ? Color.accentColor : Color.primary)
+                .frame(width: 36, height: 34)
+                .background(
+                    isSelected ? Color.accentColor.opacity(0.14) : Color.clear,
+                    in: RoundedRectangle(cornerRadius: 10, style: .continuous)
+                )
         }
+        .buttonStyle(.plain)
+        .accessibilityLabel(label)
     }
 
     private func compactIconButton(
@@ -729,6 +703,14 @@ private extension StudyCoachPaletteEraserMode {
         case .precision: "정밀"
         case .partial: "부분"
         case .stroke: "획"
+        }
+    }
+
+    var systemImage: String {
+        switch self {
+        case .precision: "eraser.fill"
+        case .partial: "eraser"
+        case .stroke: "scribble"
         }
     }
 }
@@ -812,6 +794,10 @@ private final class PaperKitPDFDiagnosticProxy: ObservableObject {
 
     func setHighlighterAzimuthIndex(_ index: Int) {
         updatePalette { $0.setHighlighterAzimuthIndex(index) }
+    }
+
+    func setHighlighterOpacity(_ opacity: Double) {
+        updatePalette { $0.setHighlighterOpacity(opacity) }
     }
 
     func setEraserMode(_ mode: StudyCoachPaletteEraserMode) {
@@ -1155,7 +1141,9 @@ private final class PaperKitPDFPageViewController: UIViewController {
             let width = CGFloat(state.highlighterWidth).clamped(to: type.validWidthRange)
             var tool = PKInkingTool(
                 type,
-                color: UIColor(state.highlighterColor),
+                color: UIColor(state.highlighterColor).withAlphaComponent(
+                    CGFloat(state.highlighterOpacity)
+                ),
                 width: width
             )
             tool.azimuth = CGFloat(state.highlighterAzimuth)

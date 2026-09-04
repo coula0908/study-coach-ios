@@ -2,7 +2,7 @@
 
 ## Current status
 
-- Repository structure: passed `scripts/validate-repository.ps1` on 2026-09-04
+- Repository structure: passed `scripts/validate-repository.ps1` on 2026-09-05
 - Apple toolchain compilation: passed on GitHub Actions with Xcode 16.4 on 2026-09-01
 - iPad Simulator unit tests: 4 passed, 0 failed on 2026-09-01
 - Swift Playgrounds package import: passed on physical iPadOS 26 with tag `0.1.0`
@@ -17,7 +17,10 @@
   physical Swift Playgrounds failed before the first visible frame with a
   five-second preview update watchdog report
 - First-frame activation hotfix: `0.1.22` passed Windows validation and the
-  full Apple CI matrix; physical Swift Playgrounds launch is pending
+  full Apple CI matrix; physical Swift Playgrounds launch and all implemented
+  toolbar functions passed, with slower launch time observed
+- Compact toolbox candidate: `0.1.23` passed Windows repository validation;
+  Apple CI and physical Swift Playgrounds acceptance are pending
 - Native PDFKit/PencilKit revision: Xcode 16.4 and Xcode 26.6 builds and iPad
   Simulator tests passed on 2026-09-02; the `0.1.7` physical iPadOS 26 retest
   confirmed the delegate crash is fixed and Apple Pencil writing works, but
@@ -26,6 +29,36 @@
 
 Do not mark the MVP complete until the native Pencil input path and the
 remaining acceptance checks pass in Swift Playgrounds on the target iPad.
+
+## Compact scrollable toolbox and readable marker: 0.1.23
+
+- Date: 2026-09-05
+- Physical baseline: `0.1.22` launches successfully and every implemented tool
+  function works on the user's iPadOS 26 device; first launch is slower than
+  before
+- Scope: UI density, marker opacity, and ink-width presets only
+- Layout: centered document capsule plus one centered icon-only toolbox
+  capsule; the toolbox scrolls horizontally rather than adding a tall context
+  row
+- Accessibility: visible Korean tool labels removed while Korean VoiceOver
+  labels remain
+- Marker: independent persistent opacity control, clamped to 10–80%, with a
+  35% default applied to the native `PKInkingTool(.marker)` color
+- Widths: pen spans 1–24 logical points and marker spans 1–48 logical points
+  across ten unique non-linear presets, avoiding multiple sub-minimum settings
+  collapsing to the same native width
+- Preference migration: old palette JSON without opacity restores its existing
+  settings and receives the new default opacity
+- Unchanged: PaperKit/PencilKit stroke processing, page/PDF coordinates,
+  Pencil gestures, first-frame activation, PDF renderer/tile cache, and markup
+  files
+- Public UX references: Goodnotes split document/toolbar plus active-tool menu,
+  and Notability's movable swipeable toolbox/style tray. No source or external
+  package was copied.
+- Windows repository validation and `git diff --check`: passed
+- Apple toolchain compilation and Simulator tests: pending
+- Physical Swift Playgrounds layout, opacity, width, and regression checks:
+  pending
 
 ## Swift Playgrounds first-frame activation hotfix: 0.1.22
 
@@ -51,8 +84,9 @@ remaining acceptance checks pass in Swift Playgrounds on the target iPad.
 - Xcode 26 normal build, strict Swift 6 concurrency build, and iPad Simulator
   tests: passed
 - Windows repository validation and `git diff --check`: passed
-- Physical Swift Playgrounds launch: pending; only that result can confirm or
-  reject the proposed launch-stall cause
+- Physical Swift Playgrounds launch: passed on iPadOS 26; every implemented
+  tool function also passed. The user observed a longer launch time than the
+  earlier baseline.
 
 ## Precise note-app toolbar and structured insertion: 0.1.21
 

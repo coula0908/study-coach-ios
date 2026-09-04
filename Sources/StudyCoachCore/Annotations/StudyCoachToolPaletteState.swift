@@ -49,8 +49,12 @@ struct StudyCoachRGBAColor: Codable, Equatable, Hashable, Sendable {
 }
 
 struct StudyCoachToolPaletteState: Codable, Equatable, Sendable {
-    static let penWidths: [Double] = [0.25, 0.35, 0.5, 0.7, 0.9, 1.2, 1.6, 2.2, 3.0, 4.2]
-    static let highlighterWidths: [Double] = [1, 1.5, 2, 3, 4, 5.5, 7.5, 10, 14, 20]
+    /// PaperKit uses a page coordinate space twice the PDF-point dimensions,
+    /// so one logical point remains a fine 0.5 PDF-point pen. Starting at one
+    /// also avoids multiple sub-minimum choices collapsing to the same native
+    /// PencilKit width after `validWidthRange` clamping.
+    static let penWidths: [Double] = [1, 1.5, 2.2, 3.2, 4.6, 6.5, 9, 12.5, 17, 24]
+    static let highlighterWidths: [Double] = [1, 2, 3.5, 5.5, 8, 12, 17, 24, 34, 48]
     static let eraserWidths: [Double] = [4, 6, 8, 12, 16, 24, 32, 48, 64, 96]
     static let highlighterAzimuths: [Double] = [0, .pi / 4, .pi / 2]
 
@@ -64,6 +68,7 @@ struct StudyCoachToolPaletteState: Codable, Equatable, Sendable {
     private(set) var selectedHighlighterColorSlot: Int
     private(set) var penColors: [StudyCoachRGBAColor]
     private(set) var highlighterColors: [StudyCoachRGBAColor]
+    private(set) var highlighterOpacity: Double
     private(set) var highlighterAzimuthIndex: Int
     private(set) var eraserMode: StudyCoachPaletteEraserMode
     private(set) var isContextPanelExpanded: Bool
@@ -90,6 +95,7 @@ struct StudyCoachToolPaletteState: Codable, Equatable, Sendable {
         self.highlighterColors = Self.normalizedColors(highlighterColors, fallback: [.yellow])
         selectedPenColorSlot = 0
         selectedHighlighterColorSlot = 0
+        highlighterOpacity = 0.35
         highlighterAzimuthIndex = 0
         eraserMode = .precision
         isContextPanelExpanded = true
@@ -145,6 +151,10 @@ struct StudyCoachToolPaletteState: Codable, Equatable, Sendable {
         highlighterAzimuthIndex = Self.clampedLevel(index, count: Self.highlighterAzimuths.count)
     }
 
+    mutating func setHighlighterOpacity(_ opacity: Double) {
+        highlighterOpacity = opacity.clamped(to: 0.10...0.80)
+    }
+
     mutating func setEraserMode(_ mode: StudyCoachPaletteEraserMode) {
         eraserMode = mode
     }
@@ -167,6 +177,111 @@ struct StudyCoachToolPaletteState: Codable, Equatable, Sendable {
 
     mutating func setContextPanelExpanded(_ isExpanded: Bool) {
         isContextPanelExpanded = isExpanded
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case selectedTool
+        case previousTool
+        case lastInkingTool
+        case penWidthLevel
+        case highlighterWidthLevel
+        case eraserWidthLevel
+        case selectedPenColorSlot
+        case selectedHighlighterColorSlot
+        case penColors
+        case highlighterColors
+        case highlighterOpacity
+        case highlighterAzimuthIndex
+        case eraserMode
+        case isContextPanelExpanded
+    }
+
+    init(from decoder: Decoder) throws {
+        self.init()
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+
+        selectedTool = try container.decodeIfPresent(
+            StudyCoachPaletteTool.self,
+            forKey: .selectedTool
+        ) ?? selectedTool
+        previousTool = try container.decodeIfPresent(
+            StudyCoachPaletteTool.self,
+            forKey: .previousTool
+        ) ?? previousTool
+        lastInkingTool = try container.decodeIfPresent(
+            StudyCoachPaletteTool.self,
+            forKey: .lastInkingTool
+        ) ?? lastInkingTool
+        penWidthLevel = Self.clampedLevel(
+            try container.decodeIfPresent(Int.self, forKey: .penWidthLevel) ?? penWidthLevel,
+            count: Self.penWidths.count
+        )
+        highlighterWidthLevel = Self.clampedLevel(
+            try container.decodeIfPresent(Int.self, forKey: .highlighterWidthLevel)
+                ?? highlighterWidthLevel,
+            count: Self.highlighterWidths.count
+        )
+        eraserWidthLevel = Self.clampedLevel(
+            try container.decodeIfPresent(Int.self, forKey: .eraserWidthLevel) ?? eraserWidthLevel,
+            count: Self.eraserWidths.count
+        )
+
+        penColors = Self.normalizedColors(
+            try container.decodeIfPresent([StudyCoachRGBAColor].self, forKey: .penColors)
+                ?? penColors,
+            fallback: [.black]
+        )
+        highlighterColors = Self.normalizedColors(
+            try container.decodeIfPresent(
+                [StudyCoachRGBAColor].self,
+                forKey: .highlighterColors
+            ) ?? highlighterColors,
+            fallback: [.yellow]
+        )
+        selectedPenColorSlot = Self.clampedLevel(
+            try container.decodeIfPresent(Int.self, forKey: .selectedPenColorSlot)
+                ?? selectedPenColorSlot,
+            count: penColors.count
+        )
+        selectedHighlighterColorSlot = Self.clampedLevel(
+            try container.decodeIfPresent(Int.self, forKey: .selectedHighlighterColorSlot)
+                ?? selectedHighlighterColorSlot,
+            count: highlighterColors.count
+        )
+        highlighterOpacity = (
+            try container.decodeIfPresent(Double.self, forKey: .highlighterOpacity) ?? 0.35
+        ).clamped(to: 0.10...0.80)
+        highlighterAzimuthIndex = Self.clampedLevel(
+            try container.decodeIfPresent(Int.self, forKey: .highlighterAzimuthIndex)
+                ?? highlighterAzimuthIndex,
+            count: Self.highlighterAzimuths.count
+        )
+        eraserMode = try container.decodeIfPresent(
+            StudyCoachPaletteEraserMode.self,
+            forKey: .eraserMode
+        ) ?? eraserMode
+        isContextPanelExpanded = try container.decodeIfPresent(
+            Bool.self,
+            forKey: .isContextPanelExpanded
+        ) ?? isContextPanelExpanded
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(selectedTool, forKey: .selectedTool)
+        try container.encode(previousTool, forKey: .previousTool)
+        try container.encode(lastInkingTool, forKey: .lastInkingTool)
+        try container.encode(penWidthLevel, forKey: .penWidthLevel)
+        try container.encode(highlighterWidthLevel, forKey: .highlighterWidthLevel)
+        try container.encode(eraserWidthLevel, forKey: .eraserWidthLevel)
+        try container.encode(selectedPenColorSlot, forKey: .selectedPenColorSlot)
+        try container.encode(selectedHighlighterColorSlot, forKey: .selectedHighlighterColorSlot)
+        try container.encode(penColors, forKey: .penColors)
+        try container.encode(highlighterColors, forKey: .highlighterColors)
+        try container.encode(highlighterOpacity, forKey: .highlighterOpacity)
+        try container.encode(highlighterAzimuthIndex, forKey: .highlighterAzimuthIndex)
+        try container.encode(eraserMode, forKey: .eraserMode)
+        try container.encode(isContextPanelExpanded, forKey: .isContextPanelExpanded)
     }
 
     private static func clampedLevel(_ level: Int, count: Int) -> Int {

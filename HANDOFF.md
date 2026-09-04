@@ -61,6 +61,20 @@ old version and tag values.
 
 ## In Progress
 
+- Physical `0.1.22` launch now passes on iPadOS 26. The user verified every
+  implemented tool function and reports that they work, while noting that the
+  first launch takes longer than before. The first-frame hotfix is therefore
+  accepted for correctness; startup latency remains a measured follow-up, not
+  a reason to change the accepted PaperKit renderer in this task.
+- `0.1.23` is now a toolbar-density refinement before PDF geometry work. Keep
+  the PaperKit editor, Pencil input, PDF renderer, tile cache, persistence, and
+  first-frame activation unchanged. Replace the tall labeled dock plus context
+  tray with a compact two-tier note-app layout: a narrow document row and one
+  horizontally scrollable, icon-first tool/style row. Add an exact marker
+  opacity value and widen the ten pen/marker width presets so adjacent levels
+  are visibly distinct. This is based on the public Goodnotes split toolbar /
+  active-tool menu and Notability movable swipeable toolbox/style-tray
+  patterns; no external code or package is copied.
 - Physical `0.1.21` launch failed before the first visible frame in Swift
   Playgrounds with `Updating took more than 5 seconds`; the preview also stayed
   black. The screenshot is a preview watchdog report, not a root-cause stack.
@@ -109,8 +123,8 @@ old version and tag values.
   unapproved working drafts; do not implement from them before that review.
 - `docs/DEVELOPMENT_SEQUENCE.md` records the decided implementation order:
   `0.1.20` minimal custom-tool bridge, `0.1.21` complete note-style toolbar,
-  `0.1.22` launch hotfix, `0.1.23` PDF geometry normalization, `0.1.24`
-  autosave/recovery, and only
+  `0.1.22` launch hotfix, `0.1.23` compact toolbar refinement, `0.1.24` PDF
+  geometry normalization, `0.1.25` autosave/recovery, and only
   then `0.2.0` promotion into `StudyCoachRootView()`. Later phases add the
   library/page model, editing/export, study/OCR, audio/sync, and AI. Keep one
   risky subsystem per physical-device test version.

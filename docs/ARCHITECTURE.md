@@ -184,10 +184,12 @@ Writes must be atomic. Metadata should include a schema version so stored drawin
 The toolbar owns the selected tool, color, and width. A newly created page canvas receives the current tool state. Undo and redo apply to the currently visible page canvas and must mark that page dirty for persistence.
 
 The first supported tools are pen, translucent highlighter, stroke eraser,
-partial eraser, undo, redo, width, and color. Apple Pencil double tap toggles
-between the most recently used inking tool and the eraser. The custom width
-control exposes values down to 0.25 page points and does not impose an
-additional highlighter minimum.
+partial eraser, undo, redo, width, and color. The current PaperKit candidate
+uses ten unique non-linear presets from 1–24 logical points for pen and 1–48
+for marker; its doubled page coordinates keep the lowest logical point fine
+without relying on sub-minimum native values that clamp together. Marker
+opacity is an independent persistent 10–80% value. Apple Pencil double tap toggles
+between the most recently used inking tool and the eraser.
 
 ## External references
 

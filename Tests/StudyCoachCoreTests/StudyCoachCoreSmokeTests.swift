@@ -15,8 +15,9 @@ final class StudyCoachCoreSmokeTests: XCTestCase {
 
         XCTAssertEqual(state.selectedTool, .pen)
         XCTAssertEqual(state.penWidthLevel, 2)
-        XCTAssertEqual(state.penWidth, 0.5)
+        XCTAssertEqual(state.penWidth, 2.2)
         XCTAssertEqual(state.penColor, .black)
+        XCTAssertEqual(state.highlighterOpacity, 0.35)
         XCTAssertTrue(state.isContextPanelExpanded)
     }
 
@@ -30,10 +31,64 @@ final class StudyCoachCoreSmokeTests: XCTestCase {
         state.setHighlighterAzimuthIndex(2)
         state.select(.pen)
 
-        XCTAssertEqual(state.penWidth, 3)
-        XCTAssertEqual(state.highlighterWidth, 1.5)
+        XCTAssertEqual(state.penWidth, 17)
+        XCTAssertEqual(state.highlighterWidth, 2)
         XCTAssertEqual(state.highlighterColor, .mint)
         XCTAssertEqual(state.highlighterAzimuth, .pi / 2)
+    }
+
+    func testInkWidthPresetsSpanClearlyDifferentNativeValues() {
+        XCTAssertEqual(Set(StudyCoachToolPaletteState.penWidths).count, 10)
+        XCTAssertEqual(Set(StudyCoachToolPaletteState.highlighterWidths).count, 10)
+        XCTAssertGreaterThan(
+            StudyCoachToolPaletteState.penWidths.last! /
+                StudyCoachToolPaletteState.penWidths.first!,
+            20
+        )
+        XCTAssertGreaterThan(
+            StudyCoachToolPaletteState.highlighterWidths.last! /
+                StudyCoachToolPaletteState.highlighterWidths.first!,
+            40
+        )
+    }
+
+    func testHighlighterOpacityClampsToReadableControlRange() {
+        var state = StudyCoachToolPaletteState()
+
+        state.setHighlighterOpacity(5)
+        XCTAssertEqual(state.highlighterOpacity, 0.80)
+        state.setHighlighterOpacity(0)
+        XCTAssertEqual(state.highlighterOpacity, 0.10)
+        state.setHighlighterOpacity(0.42)
+        XCTAssertEqual(state.highlighterOpacity, 0.42)
+    }
+
+    func testOlderPaletteJSONRestoresWithDefaultHighlighterOpacity() throws {
+        let oldJSON = """
+        {
+          "selectedTool": "pen",
+          "previousTool": "pen",
+          "lastInkingTool": "pen",
+          "penWidthLevel": 4,
+          "highlighterWidthLevel": 2,
+          "eraserWidthLevel": 4,
+          "selectedPenColorSlot": 0,
+          "selectedHighlighterColorSlot": 0,
+          "penColors": [{"red":0.08,"green":0.08,"blue":0.09,"alpha":1}],
+          "highlighterColors": [{"red":1,"green":0.84,"blue":0.12,"alpha":1}],
+          "highlighterAzimuthIndex": 0,
+          "eraserMode": "precision",
+          "isContextPanelExpanded": true
+        }
+        """
+
+        let restored = try JSONDecoder().decode(
+            StudyCoachToolPaletteState.self,
+            from: try XCTUnwrap(oldJSON.data(using: .utf8))
+        )
+
+        XCTAssertEqual(restored.penWidthLevel, 4)
+        XCTAssertEqual(restored.highlighterOpacity, 0.35)
     }
 
     func testPencilEraserToggleReturnsToLastInkingTool() {

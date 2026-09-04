@@ -1,5 +1,25 @@
 # Changelog
 
+## 0.1.23 — Compact scrollable toolbox and readable marker
+
+- Replace the tall labeled tool dock plus separate settings tray with two
+  narrow centered capsules: one document/navigation row and one icon-first,
+  horizontally scrollable tool/style row.
+- Keep Korean text out of the visible tool row while retaining Korean
+  accessibility labels for VoiceOver.
+- Keep every setting in the single scrollable row so narrow layouts reveal
+  additional widths, colors, marker opacity, marker angle, and eraser modes by
+  swiping instead of consuming more PDF height.
+- Add a persistent 10–80% highlighter opacity control with a readable 35%
+  default and apply that alpha directly to the native marker color.
+- Replace sub-minimum ink choices that could clamp to nearly identical native
+  widths with visibly separated ten-step pen and highlighter ranges.
+- Preserve previously saved palette JSON by defaulting only the newly absent
+  opacity field during decoding.
+- Preserve the accepted PaperKit handwriting engine, Pencil interaction,
+  first-frame activation hotfix, PDF geometry, renderer, tile cache, and
+  PaperMarkup persistence unchanged.
+
 ## 0.1.22 — Swift Playgrounds first-frame hotfix
 
 - Fix the physical `0.1.21` launch regression where Swift Playgrounds showed a
@@ -11,8 +31,8 @@
 - Cache the last applied palette state so renderer status and unrelated SwiftUI
   updates cannot repeatedly reassign the same PaperKit tool or first responder.
 - Preserve the `0.1.21` toolbar, all stored PDF/PaperMarkup data, the accepted
-  renderer, and every approved tool setting. Physical iPad confirmation of the
-  hotfix remains required.
+  renderer, and every approved tool setting. Physical iPad confirmation passed;
+  the user also noted a longer launch time than before.
 
 ## 0.1.21 — Precise note-app toolbar and structured content
 
