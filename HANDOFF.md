@@ -45,6 +45,8 @@ old version and tag values.
   physical-test instructions
 - `0.1.21` annotated tag target commit: `0a0cb53` — version record and
   physical-test candidate
+- `0.1.22` annotated tag target commit: `6d252be` — first-frame hotfix test
+  candidate
 - Package/module: `StudyCoachCore`
 - Production entry point: `StudyCoachRootView()`
 - Current isolated candidate entry point:
