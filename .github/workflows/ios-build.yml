@@ -60,6 +60,7 @@ jobs:
             build-for-testing \
             -scheme StudyCoachCore \
             -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath "$RUNNER_TEMP/StudyCoach-Swift6-DerivedData" \
             -skipPackagePluginValidation \
             CODE_SIGNING_ALLOWED=NO \
             SWIFT_VERSION=6 \
