@@ -400,88 +400,110 @@ private struct PaperKitPDFDiagnosticWorkspace: View {
         }
     }
 
-    @ViewBuilder
-    private var activeToolControls: some View {
+    private var activeToolControls: AnyView {
         switch proxy.paletteState.selectedTool {
         case .pen:
-            inlineInkControls(
-                color: proxy.paletteState.penColor,
-                colors: proxy.paletteState.penColors,
-                selectedColorSlot: proxy.paletteState.selectedPenColorSlot,
-                widths: StudyCoachToolPaletteState.penWidths,
-                selectedWidthLevel: proxy.paletteState.penWidthLevel,
-                selectWidth: proxy.setPenWidthLevel,
-                selectColor: proxy.selectPenColor,
-                replaceColor: proxy.replaceSelectedPenColor
+            AnyView(
+                HStack(spacing: 4) {
+                    inlineInkControls(
+                        color: proxy.paletteState.penColor,
+                        colors: proxy.paletteState.penColors,
+                        selectedColorSlot: proxy.paletteState.selectedPenColorSlot,
+                        widths: StudyCoachToolPaletteState.penWidths,
+                        selectedWidthLevel: proxy.paletteState.penWidthLevel,
+                        selectWidth: proxy.setPenWidthLevel,
+                        selectColor: proxy.selectPenColor,
+                        replaceColor: proxy.replaceSelectedPenColor
+                    )
+                }
             )
         case .highlighter:
-            Group {
-                inlineInkControls(
-                    color: proxy.paletteState.highlighterColor,
-                    colors: proxy.paletteState.highlighterColors,
-                    selectedColorSlot: proxy.paletteState.selectedHighlighterColorSlot,
-                    widths: StudyCoachToolPaletteState.highlighterWidths,
-                    selectedWidthLevel: proxy.paletteState.highlighterWidthLevel,
-                    selectWidth: proxy.setHighlighterWidthLevel,
-                    selectColor: proxy.selectHighlighterColor,
-                    replaceColor: proxy.replaceSelectedHighlighterColor
-                )
-                toolDivider
-                Image(systemName: "circle.lefthalf.filled")
-                    .foregroundStyle(.secondary)
-                    .accessibilityHidden(true)
-                Slider(
-                    value: Binding(
-                        get: { proxy.paletteState.highlighterOpacity },
-                        set: proxy.setHighlighterOpacity
-                    ),
-                    in: 0.10...0.80,
-                    step: 0.05
-                )
-                .frame(width: 96)
-                .tint(Color(proxy.paletteState.highlighterColor))
-                .accessibilityLabel("형광펜 투명도")
-                .accessibilityValue(
-                    "\(Int((proxy.paletteState.highlighterOpacity * 100).rounded()))퍼센트"
-                )
-                toolDivider
-                ForEach(Array(StudyCoachToolPaletteState.highlighterAzimuths.indices), id: \.self) { index in
-                    angleButton(index)
+            AnyView(
+                HStack(spacing: 4) {
+                    inlineInkControls(
+                        color: proxy.paletteState.highlighterColor,
+                        colors: proxy.paletteState.highlighterColors,
+                        selectedColorSlot: proxy.paletteState.selectedHighlighterColorSlot,
+                        widths: StudyCoachToolPaletteState.highlighterWidths,
+                        selectedWidthLevel: proxy.paletteState.highlighterWidthLevel,
+                        selectWidth: proxy.setHighlighterWidthLevel,
+                        selectColor: proxy.selectHighlighterColor,
+                        replaceColor: proxy.replaceSelectedHighlighterColor
+                    )
+                    toolDivider
+                    Image(systemName: "circle.lefthalf.filled")
+                        .foregroundStyle(.secondary)
+                        .accessibilityHidden(true)
+                    Slider(
+                        value: Binding(
+                            get: { proxy.paletteState.highlighterOpacity },
+                            set: { proxy.setHighlighterOpacity($0) }
+                        ),
+                        in: 0.10...0.80,
+                        step: 0.05
+                    )
+                    .frame(width: 96)
+                    .tint(Color(proxy.paletteState.highlighterColor))
+                    .accessibilityLabel("형광펜 투명도")
+                    .accessibilityValue(
+                        "\(Int((proxy.paletteState.highlighterOpacity * 100).rounded()))퍼센트"
+                    )
+                    toolDivider
+                    ForEach(
+                        Array(StudyCoachToolPaletteState.highlighterAzimuths.indices),
+                        id: \.self
+                    ) { index in
+                        angleButton(index)
+                    }
                 }
-            }
+            )
         case .eraser:
-            ForEach(StudyCoachPaletteEraserMode.allCases) { mode in
-                compactChoiceIconButton(
-                    mode.systemImage,
-                    label: mode.title,
-                    isSelected: proxy.paletteState.eraserMode == mode
-                ) { proxy.setEraserMode(mode) }
-            }
-            toolDivider
-            inlineWidthSelector(
-                widths: StudyCoachToolPaletteState.eraserWidths,
-                selectedLevel: proxy.paletteState.eraserWidthLevel,
-                color: .primary,
-                select: proxy.setEraserWidthLevel
+            AnyView(
+                HStack(spacing: 4) {
+                    ForEach(StudyCoachPaletteEraserMode.allCases) { mode in
+                        compactChoiceIconButton(
+                            mode.systemImage,
+                            label: mode.title,
+                            isSelected: proxy.paletteState.eraserMode == mode
+                        ) { proxy.setEraserMode(mode) }
+                    }
+                    toolDivider
+                    inlineWidthSelector(
+                        widths: StudyCoachToolPaletteState.eraserWidths,
+                        selectedLevel: proxy.paletteState.eraserWidthLevel,
+                        color: .primary,
+                        select: proxy.setEraserWidthLevel
+                    )
+                }
             )
         case .lasso:
-            EmptyView()
+            AnyView(EmptyView())
         case .text:
-            compactChoiceIconButton(
-                "plus",
-                label: "텍스트 상자 추가",
-                isSelected: true
-            ) {
-                draftText = ""
-                isShowingTextEditor = true
-            }
+            AnyView(
+                compactChoiceIconButton(
+                    "plus",
+                    label: "텍스트 상자 추가",
+                    isSelected: true
+                ) {
+                    draftText = ""
+                    isShowingTextEditor = true
+                }
+            )
         case .image:
-            compactChoiceIconButton("photo", label: "사진에서 이미지 추가", isSelected: true) {
-                isShowingPhotoPicker = true
-            }
-            compactChoiceIconButton("folder", label: "파일에서 이미지 추가", isSelected: false) {
-                isShowingImageImporter = true
-            }
+            AnyView(
+                HStack(spacing: 4) {
+                    compactChoiceIconButton(
+                        "photo",
+                        label: "사진에서 이미지 추가",
+                        isSelected: true
+                    ) { isShowingPhotoPicker = true }
+                    compactChoiceIconButton(
+                        "folder",
+                        label: "파일에서 이미지 추가",
+                        isSelected: false
+                    ) { isShowingImageImporter = true }
+                }
+            )
         }
     }
 
