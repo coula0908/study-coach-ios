@@ -73,11 +73,12 @@ jobs:
               escaped="${escaped//$'\n'/'%0A'}"
               echo "::error title=Swift 6 compile::$escaped"
             done < <(grep -E 'error:|warning:' "$LOG_FILE" | tail -40)
-            build_tail="$(tail -80 "$LOG_FILE")"
-            escaped_tail="${build_tail//'%'/'%25'}"
-            escaped_tail="${escaped_tail//$'\r'/'%0D'}"
-            escaped_tail="${escaped_tail//$'\n'/'%0A'}"
-            echo "::error title=Swift 6 build tail::$escaped_tail"
+            tail -20 "$LOG_FILE" | cut -c1-600 | while IFS= read -r diagnostic; do
+              escaped="${diagnostic//'%'/'%25'}"
+              escaped="${escaped//$'\r'/'%0D'}"
+              escaped="${escaped//$'\n'/'%0A'}"
+              echo "::error title=Swift 6 build tail::$escaped"
+            done
             cat "$LOG_FILE"
             exit 1
           fi
