@@ -34,7 +34,7 @@ old version and tag values.
 - Repository: `https://github.com/coula0908/study-coach-ios`
 - Active local branch: `codex/paperkit-adaptive-background`
 - Remote development branch: `main`
-- Latest installable package tag: `0.1.22`
+- Latest installable package tag: `0.1.23`
 - Latest runtime implementation commit: `e73524d` — compact scrollable
   PaperKit toolbox, marker opacity, wider ink presets, and bounded SwiftUI type
   inference
@@ -48,6 +48,8 @@ old version and tag values.
   physical-test candidate
 - `0.1.22` annotated tag target commit: `6d252be` — first-frame hotfix test
   candidate
+- `0.1.23` annotated tag target commit: `9556872` — compact toolbox physical
+  test candidate after full Apple CI success
 - Package/module: `StudyCoachCore`
 - Production entry point: `StudyCoachRootView()`
 - Current isolated candidate entry point:
