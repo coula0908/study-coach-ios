@@ -35,9 +35,9 @@ old version and tag values.
 - Active local branch: `codex/paperkit-adaptive-background`
 - Remote development branch: `main`
 - Latest installable package tag: `0.1.23`
-- Latest runtime implementation commit: `e73524d` — compact scrollable
-  PaperKit toolbox, marker opacity, wider ink presets, and bounded SwiftUI type
-  inference
+- Latest runtime implementation commit: `879dda5` — persistent document tabs,
+  centered primary/context tool rows, width sliders, exact marker azimuth, and
+  vector-eraser width correction
 - Latest researched toolbar-design commit: `1a14d92` — StudyCoach-owned exact
   native tools, direct Pencil interactions, structured insertion, and feature
   capability boundaries
@@ -58,9 +58,10 @@ old version and tag values.
   working-tree toolbar correction candidate. It adds persistent top document
   tabs, centered larger tool icons, a toggleable tool-settings row, width
   sliders, explicit marker azimuth construction, and a nonzero vector-eraser
-  width. Windows validation passes; Apple CI, a package tag, and physical
-  iPadOS 26 acceptance are still pending. Latest installable tag remains
-  `0.1.23`.
+  width. Windows validation and GitHub Actions run `33917015064` pass Xcode 16
+  fallback, Xcode 26 normal and strict Swift 6 builds, and both iPad Simulator
+  jobs. A package tag and physical iPadOS 26 acceptance are still pending;
+  latest installable tag remains `0.1.23`.
 
 ## In Progress
 
@@ -79,6 +80,11 @@ old version and tag values.
   active-tool settings. Apple's current PencilKit APIs explicitly support an
   exact `PKInkingTool` azimuth and eraser-item width. No external code or
   dependency is being copied.
+- `0.1.24` implementation commit `879dda5` passes Windows repository
+  validation, `git diff --check`, and GitHub Actions run `33917015064`. The
+  immediate next step is to create the package tag, then physically test the
+  tab switching, settings-row toggle, width slider, all three marker angles,
+  and all three eraser modes/ranges without regressing the accepted editor.
 - Physical `0.1.22` launch now passes on iPadOS 26. The user verified every
   implemented tool function and reports that they work, while noting that the
   first launch takes longer than before. The first-frame hotfix is therefore

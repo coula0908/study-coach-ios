@@ -25,7 +25,8 @@
   range for the whole-stroke eraser
 - Document-tab/context-row candidate: `0.1.24` preserves the accepted editor
   and renderer while correcting the reported toolbar interaction defects;
-  Windows and Apple validation are pending
+  Windows validation and the full Apple CI matrix pass; physical Swift
+  Playgrounds acceptance is pending
 - Native PDFKit/PencilKit revision: Xcode 16.4 and Xcode 26.6 builds and iPad
   Simulator tests passed on 2026-09-02; the `0.1.7` physical iPadOS 26 retest
   confirmed the delegate crash is fixed and Apple Pencil writing works, but
@@ -63,7 +64,11 @@ remaining acceptance checks pass in Swift Playgrounds on the target iPad.
   page rasterization and tile cache, first-frame activation, and stored
   PaperMarkup data
 - Windows repository validation and `git diff --check`: passed
-- Apple CI and Simulator tests: pending
+- Workflow run:
+  <https://github.com/coula0908/study-coach-ios/actions/runs/33917015064>
+- Xcode 16 fallback build and iPad Simulator tests: passed
+- Xcode 26 normal build, strict Swift 6 concurrency build, and iPad Simulator
+  tests: passed
 - Physical Swift Playgrounds compilation and behavior: pending
 
 ## Compact scrollable toolbox and readable marker: 0.1.23
