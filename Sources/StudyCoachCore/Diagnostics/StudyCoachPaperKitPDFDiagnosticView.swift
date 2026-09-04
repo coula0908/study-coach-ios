@@ -1992,7 +1992,7 @@ private extension UIColor {
 @available(iOS 26.0, *)
 private extension CGFloat {
     func clamped(to range: ClosedRange<CGFloat>) -> CGFloat {
-        min(max(self, range.lowerBound), range.upperBound)
+        Swift.min(Swift.max(self, range.lowerBound), range.upperBound)
     }
 }
 

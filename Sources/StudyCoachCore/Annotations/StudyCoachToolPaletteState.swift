@@ -183,6 +183,6 @@ struct StudyCoachToolPaletteState: Codable, Equatable, Sendable {
 
 private extension Double {
     func clamped(to range: ClosedRange<Double>) -> Double {
-        min(max(self, range.lowerBound), range.upperBound)
+        Swift.min(Swift.max(self, range.lowerBound), range.upperBound)
     }
 }
