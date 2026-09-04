@@ -2,7 +2,7 @@
 
 ## Current status
 
-- Repository structure: passed `scripts/validate-repository.ps1` on 2026-09-02
+- Repository structure: passed `scripts/validate-repository.ps1` on 2026-09-04
 - Apple toolchain compilation: passed on GitHub Actions with Xcode 16.4 on 2026-09-01
 - iPad Simulator unit tests: 4 passed, 0 failed on 2026-09-01
 - Swift Playgrounds package import: passed on physical iPadOS 26 with tag `0.1.0`
@@ -12,6 +12,9 @@
 - PaperKit custom-toolbar bridge: `0.1.20` passed the user's 13-item physical
   iPadOS 26 checklist; the minimal StudyCoach controls are accepted as the
   baseline for fine-grained native tool settings
+- Precise note-app toolbar candidate: `0.1.21` passed Xcode 16 fallback,
+  Xcode 26 normal and strict Swift 6 builds, and both iPad Simulator test jobs;
+  physical Swift Playgrounds and Apple Pencil acceptance are pending
 - Native PDFKit/PencilKit revision: Xcode 16.4 and Xcode 26.6 builds and iPad
   Simulator tests passed on 2026-09-02; the `0.1.7` physical iPadOS 26 retest
   confirmed the delegate crash is fixed and Apple Pencil writing works, but
@@ -20,6 +23,40 @@
 
 Do not mark the MVP complete until the native Pencil input path and the
 remaining acceptance checks pass in Swift Playgrounds on the target iPad.
+
+## Precise note-app toolbar and structured insertion: 0.1.21
+
+- Date: 2026-09-04
+- Scope: replace the isolated `0.1.20` A/B toolbar with a StudyCoach-owned
+  document bar, six-tool dock, and contextual controls
+- Native tools: exact `PKInkingTool`, `PKEraserTool`, and `PKLassoTool` values
+  are assigned to `PaperMarkupViewController.drawingTool`; there is no hidden
+  `PKToolPicker` in this PDF diagnostic
+- Ink settings: independent 10-step widths, six editable quick-color slots per
+  ink tool, and marker azimuth choices at 0, 45, and 90 degrees
+- Eraser settings: fixed-width precision, touched-part bitmap, and whole-stroke
+  modes with an independent 10-step size
+- Pencil hardware: direct `UIPencilInteraction` double-tap and squeeze handling
+  honors the current system-preferred Pencil action
+- Structured content: PaperKit-native text boxes and images are inserted at the
+  visible-page center and selected with the lasso afterward
+- Image fidelity: no size-based downsampling; camera orientation is normalized
+  at the original pixel dimensions and only the initial paper frame is fitted
+- Preference persistence: selected tools, width levels, quick colors, marker
+  angle, eraser mode, and tray visibility persist through `UserDefaults`
+- Renderer and data boundary: accepted `0.1.19` PDF rendering, navigation,
+  page geometry, and per-page PaperMarkup serialization are unchanged
+- Windows repository validation and `git diff --check`: passed
+- Runtime implementation commits: `4920205`, `32121e2`
+- CI diagnostics improvement commit: `193af04`
+- Workflow run:
+  <https://github.com/coula0908/study-coach-ios/actions/runs/33886410022>
+- Xcode 16 fallback build and iPad Simulator tests: passed
+- Xcode 26 normal build, strict Swift 6 concurrency build, and iPad Simulator
+  tests: passed
+- Physical Swift Playgrounds compilation and iPadOS 26 behavior: pending
+- Explicit deferrals: audio waits for stable document persistence; patterned
+  freehand ink waits for an isolated, physically validated stroke experiment
 
 ## Isolated custom-toolbar bridge: 0.1.20
 

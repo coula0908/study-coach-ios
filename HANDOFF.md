@@ -1,6 +1,6 @@
 # StudyCoachCore handoff
 
-Last updated: 2026-09-04
+Last updated: 2026-09-05
 
 Read `AGENTS.md`, this file, `docs/ARCHITECTURE.md`, and the newest sections of
 `VALIDATION.md` before changing the viewer. This project is intended to become
@@ -34,9 +34,9 @@ old version and tag values.
 - Repository: `https://github.com/coula0908/study-coach-ios`
 - Active local branch: `codex/paperkit-adaptive-background`
 - Remote development branch: `main`
-- Latest installable package tag: `0.1.20`
-- Latest runtime implementation commit: `9dfe5e5` — isolated custom-toolbar
-  bridge over the accepted PaperKit editor
+- Latest installable package tag: `0.1.21`
+- Latest runtime implementation commit: `32121e2` — precise native PaperKit
+  tool state, note-app toolbar, direct Pencil actions, and structured insertion
 - Latest researched toolbar-design commit: `1a14d92` — StudyCoach-owned exact
   native tools, direct Pencil interactions, structured insertion, and feature
   capability boundaries
@@ -47,27 +47,22 @@ old version and tag values.
 - Production entry point: `StudyCoachRootView()`
 - Current isolated candidate entry point:
   `StudyCoachPaperKitPDFDiagnosticView()` on iPadOS 26 or later
-- Source version `0.1.20` adds the isolated StudyCoach/Apple toolbar A/B bridge
-  in `9dfe5e5` and is pushed to `origin/main`. GitHub Actions run `33879002800`
-  passed the Xcode 16 fallback build, Xcode 26 normal build, strict Swift 6
-  build, and both iPad Simulator jobs. Version record commit `13c0c20` and the
-  annotated `0.1.20` package tag are pushed. The user reports all numbered
-  `0.1.20` physical checks 1 through 13 passed on iPadOS 26. The accepted
-  `0.1.19` renderer and its
-  slower-than-Notability tradeoff are unchanged.
+- Source version `0.1.21` replaces the isolated diagnostic's rough A/B toolbar
+  with a polished StudyCoach-owned tool UI in `4920205` plus the compile fix in
+  `32121e2`. GitHub Actions run `33886410022` passed the Xcode 16 fallback,
+  Xcode 26 normal, strict Swift 6, and both iPad Simulator jobs. Physical
+  Swift Playgrounds and Apple Pencil acceptance for `0.1.21` remain pending.
+  The user reports all numbered `0.1.20` physical checks 1 through 13 passed,
+  and the accepted `0.1.19` renderer remains unchanged.
 
 ## In Progress
 
-- `0.1.21` implementation has begun with the user's approval. Scope is the
-  polished note-app toolbar and approved capabilities 1 through 8: exact
-  pen/highlighter widths and quick colors, marker azimuth, three eraser modes
-  and widths, direct Pencil double-tap/squeeze handling, freeform lasso,
-  PaperKit text boxes, and image insertion including large originals. Audio is
-  explicitly deferred until the document persistence format is stable.
-  Patterned freehand ink remains outside this implementation because the
-  native tool has no dash-pattern property and its isolated stroke-processing
-  experiment has not passed. Preserve the `0.1.20` editor and renderer
-  behavior while implementing this scope.
+- `0.1.21` implementation and Apple CI are complete. It includes the polished
+  document bar/tool dock/context tray, exact 10-step ink and eraser widths,
+  editable quick colors, marker azimuth, three eraser modes, lasso, direct
+  Pencil double-tap/squeeze, PaperKit text boxes, and original-pixel image
+  insertion including large originals. The immediate next action is physical
+  Swift Playgrounds compilation and behavior testing on iPadOS 26.
 - `0.1.20` custom-toolbar bridge implementation, Apple CI, package tag, and
   physical Swift Playgrounds A/B checklist are complete. All numbered checks
   1 through 13 passed. Keep the accepted `0.1.19` renderer, PDF

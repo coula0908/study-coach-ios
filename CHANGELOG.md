@@ -1,5 +1,28 @@
 # Changelog
 
+## 0.1.21 — Precise note-app toolbar and structured content
+
+- Replace the isolated diagnostic's rough StudyCoach/Apple A/B toolbar with a
+  polished document bar, note-tool dock, and tool-specific settings tray.
+- Make StudyCoach own native PaperKit tool values directly instead of keeping a
+  hidden `PKToolPicker` as the parameter or hardware-event authority.
+- Add independent 10-step pen, highlighter, and eraser widths; six editable
+  quick-color slots per ink tool; three marker azimuth choices; and persistent
+  tool preferences.
+- Add fixed-width precision, touched-part bitmap, and whole-stroke erasers plus
+  the native PencilKit lasso.
+- Handle Apple Pencil double tap and squeeze through `UIPencilInteraction` and
+  the user's system-preferred Pencil actions.
+- Add PaperKit-native text boxes and image elements. Image insertion preserves
+  the source pixel dimensions, including large originals, while fitting only
+  the initial on-page frame to the visible page area.
+- Keep the accepted `0.1.19` PDF base/tile renderer, PaperKit viewport,
+  page-coordinate transform, gestures, and per-page PaperMarkup format
+  unchanged.
+- Defer audio until the document persistence format is stable. Patterned
+  freehand ink remains an isolated future experiment because native
+  `PKInkingTool` has no public dash-pattern control.
+
 ## 0.1.20 — Isolated StudyCoach toolbar bridge
 
 - Keep `PaperMarkupViewController` and the accepted `0.1.19` PDF renderer,
