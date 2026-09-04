@@ -537,7 +537,6 @@ private struct PaperKitPDFDiagnosticWorkspace: View {
                             .padding(-3)
                         }
                         .frame(width: 30, height: 34)
-                    }
                 }
                 .buttonStyle(.plain)
                 .accessibilityLabel("빠른 색상 \(index + 1)")
