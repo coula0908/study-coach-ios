@@ -10,33 +10,66 @@ import PaperKit
 
 @MainActor
 final class StudyCoachCoreSmokeTests: XCTestCase {
-    func testCustomToolPaletteDefaultsToPenWithApplePaletteHidden() {
+    func testCustomToolPaletteDefaultsToPrecisePenSettings() {
         let state = StudyCoachToolPaletteState()
 
         XCTAssertEqual(state.selectedTool, .pen)
-        XCTAssertFalse(state.showsApplePalette)
+        XCTAssertEqual(state.penWidthLevel, 2)
+        XCTAssertEqual(state.penWidth, 0.5)
+        XCTAssertEqual(state.penColor, .black)
+        XCTAssertTrue(state.isContextPanelExpanded)
     }
 
-    func testCustomToolPaletteTracksAppAndSystemSelections() {
+    func testCustomToolPaletteKeepsIndependentInkSettings() {
+        var state = StudyCoachToolPaletteState()
+
+        state.setPenWidthLevel(8)
+        state.select(.highlighter)
+        state.setHighlighterWidthLevel(1)
+        state.selectHighlighterColor(slot: 3)
+        state.setHighlighterAzimuthIndex(2)
+        state.select(.pen)
+
+        XCTAssertEqual(state.penWidth, 3)
+        XCTAssertEqual(state.highlighterWidth, 1.5)
+        XCTAssertEqual(state.highlighterColor, .mint)
+        XCTAssertEqual(state.highlighterAzimuth, .pi / 2)
+    }
+
+    func testPencilEraserToggleReturnsToLastInkingTool() {
         var state = StudyCoachToolPaletteState()
 
         state.select(.highlighter)
-        XCTAssertEqual(state.selectedTool, .highlighter)
-
-        state.reflectSystemSelection(.eraser)
+        state.toggleEraser()
         XCTAssertEqual(state.selectedTool, .eraser)
+        state.toggleEraser()
+        XCTAssertEqual(state.selectedTool, .highlighter)
     }
 
-    func testChangingPaletteVisibilityDoesNotChangeSelectedTool() {
-        var state = StudyCoachToolPaletteState(selectedTool: .highlighter)
+    func testPaletteClampsControlLevelsAndUpdatesQuickColorSlot() {
+        var state = StudyCoachToolPaletteState()
 
-        state.setApplePaletteVisible(true)
-        XCTAssertTrue(state.showsApplePalette)
-        XCTAssertEqual(state.selectedTool, .highlighter)
+        state.setPenWidthLevel(200)
+        state.setHighlighterWidthLevel(-8)
+        state.setEraserWidthLevel(200)
+        state.selectPenColor(slot: 2)
+        let replacement = StudyCoachRGBAColor(red: 0.2, green: 0.3, blue: 0.4)
+        state.replaceSelectedPenColor(with: replacement)
 
-        state.setApplePaletteVisible(false)
-        XCTAssertFalse(state.showsApplePalette)
-        XCTAssertEqual(state.selectedTool, .highlighter)
+        XCTAssertEqual(state.penWidthLevel, 9)
+        XCTAssertEqual(state.highlighterWidthLevel, 0)
+        XCTAssertEqual(state.eraserWidthLevel, 9)
+        XCTAssertEqual(state.penColor, replacement)
+    }
+
+    func testSwitchPreviousToolRoundTripsWithoutApplePickerState() {
+        var state = StudyCoachToolPaletteState()
+
+        state.select(.lasso)
+        state.switchToPreviousTool()
+        XCTAssertEqual(state.selectedTool, .pen)
+        state.switchToPreviousTool()
+        XCTAssertEqual(state.selectedTool, .lasso)
     }
 
     func testRootViewCanBeCreated() {
@@ -59,6 +92,16 @@ final class StudyCoachCoreSmokeTests: XCTestCase {
         )
         XCTAssertNotNil(controller.markup)
         XCTAssertEqual(controller.supportedFeatureSet, .latest)
+
+        var marker = PKInkingTool(.marker, color: .systemYellow, width: 2)
+        marker.azimuth = .pi / 4
+        controller.drawingTool = marker
+        XCTAssertEqual(marker.azimuth, .pi / 4, accuracy: 0.001)
+
+        controller.drawingTool = PKEraserTool(.fixedWidthBitmap, width: 12)
+        controller.drawingTool = PKEraserTool(.bitmap, width: 12)
+        controller.drawingTool = PKEraserTool(.vector, width: 12)
+        controller.drawingTool = PKLassoTool()
     }
 
     @available(iOS 26.0, *)

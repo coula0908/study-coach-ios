@@ -58,6 +58,16 @@ old version and tag values.
 
 ## In Progress
 
+- `0.1.21` implementation has begun with the user's approval. Scope is the
+  polished note-app toolbar and approved capabilities 1 through 8: exact
+  pen/highlighter widths and quick colors, marker azimuth, three eraser modes
+  and widths, direct Pencil double-tap/squeeze handling, freeform lasso,
+  PaperKit text boxes, and image insertion including large originals. Audio is
+  explicitly deferred until the document persistence format is stable.
+  Patterned freehand ink remains outside this implementation because the
+  native tool has no dash-pattern property and its isolated stroke-processing
+  experiment has not passed. Preserve the `0.1.20` editor and renderer
+  behavior while implementing this scope.
 - `0.1.20` custom-toolbar bridge implementation, Apple CI, package tag, and
   physical Swift Playgrounds A/B checklist are complete. All numbered checks
   1 through 13 passed. Keep the accepted `0.1.19` renderer, PDF

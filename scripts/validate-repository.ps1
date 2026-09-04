@@ -130,10 +130,13 @@ foreach ($requiredPaperKitPDFText in @(
     'PaperMarkup(dataRepresentation:'
     'dataRepresentation()'
     'pageIndex: Int'
-    'toolPicker.addObserver(self)'
-    'toolPickerSelectedToolItemDidChange'
-    'toolPickerVisibility = .hidden'
-    'selectedToolItem = item'
+    'paperController.drawingTool = PKInkingTool('
+    'paperController.drawingTool = PKEraserTool('
+    'paperController.drawingTool = PKLassoTool()'
+    'UIPencilInteraction(delegate: self)'
+    'UIPencilInteraction.preferredTapAction'
+    'insertNewTextbox('
+    'insertNewImage('
 )) {
     if (-not $paperKitPDFDiagnostic.Contains($requiredPaperKitPDFText)) {
         throw "PaperKit PDF diagnostic is missing: $requiredPaperKitPDFText"
@@ -158,6 +161,8 @@ foreach ($removedViewportDelayText in @(
     'observedPinchGestureChanged'
     'Timer(timeInterval:'
     'PaperMarkupViewController.Delegate'
+    'pencilKitResponderState.activeToolPicker'
+    'toolPickerVisibility = .hidden'
 )) {
     if ($paperKitPDFDiagnostic.Contains($removedViewportDelayText)) {
         throw "The adaptive PaperKit PDF diagnostic still contains a fixed viewport delay mechanism: $removedViewportDelayText"
