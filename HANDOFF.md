@@ -48,14 +48,20 @@ old version and tag values.
 
 ## In Progress
 
-- No runtime implementation is currently in progress.
-- The user requested design discussion only after identifying that `0.1.18`
-  avoids pan-time image swapping but can leave the magnified base PDF blurry
-  during fixed-scale movement.
-- The next renderer direction below has been researched and accepted as the
-  leading candidate, but no source code for it has been written.
-- The immediate next action is to wait for explicit authorization to implement
-  the fixed-scale tile/cache strategy. Do not silently change the viewer.
+- Runtime implementation of the fixed-scale PDF tile/cache strategy has begun
+  with the user's explicit authorization.
+- Target source version: `0.1.19`.
+- Pinch behavior: keep the existing stable representation and submit no
+  transient zoom-level renders until the gesture ends.
+- Fixed-scale pan behavior: retain completed high-resolution tiles, request
+  only missing visible and neighboring tiles, and never clear the whole detail
+  surface merely because content offset changed.
+- The complete bounded page image remains underneath so a missing tile never
+  appears white or blank. Per-tile status-message flashing must be removed.
+- Current stage: the single visible-region bitmap has been replaced locally by
+  a bounded cached grid, with planner tests and documentation. Windows
+  `scripts/validate-repository.ps1` and `git diff --check` pass. Apple builds
+  have not yet run. No `0.1.19` commit, push, or tag exists yet.
 
 ## Confirmed physical-device history
 
@@ -97,7 +103,7 @@ blurry, and rerenders overlapping pixels. Rendering the entire PDF page at the
 maximum zoom resolution avoids that seam but can require hundreds of megabytes
 for a single ordinary page, so it is not a safe general solution.
 
-The leading next candidate is therefore:
+The `0.1.19` implementation candidate is therefore:
 
 - PaperKit remains the sole owner of scrolling, zooming, Pencil input, markup,
   and coordinates.
@@ -118,8 +124,8 @@ The leading next candidate is therefore:
 - Remove per-tile "rendering/completed" status text from the normal reading UI;
   retain diagnostics in logs or an opt-in debug display.
 
-Do not implement this candidate until the user explicitly asks to resume code
-changes. The current turn requested design discussion and documentation only.
+The user explicitly authorized implementation after the design discussion.
+Keep this path isolated until its physical iPad behavior is accepted.
 
 ## External evidence to consult first
 

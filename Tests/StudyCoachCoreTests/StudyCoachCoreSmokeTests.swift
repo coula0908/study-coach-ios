@@ -75,6 +75,78 @@ final class StudyCoachCoreSmokeTests: XCTestCase {
         XCTAssertEqual(detailImage.size.width, 150, accuracy: 0.01)
         XCTAssertEqual(detailImage.size.height, 180, accuracy: 0.01)
     }
+
+    @available(iOS 26.0, *)
+    func testDetailTilePlanReusesLevelAndCoverageDuringFixedScalePan() throws {
+        let logicalBounds = CGRect(x: 0, y: 0, width: 1_200, height: 1_600)
+        let firstVisibleFrame = CGRect(x: 300, y: 400, width: 300, height: 400)
+        let secondVisibleFrame = firstVisibleFrame.offsetBy(dx: 90, dy: 0)
+        let viewportSize = CGSize(width: 1_200, height: 1_600)
+
+        let firstPlan = try XCTUnwrap(
+            PaperKitPDFDetailTilePlanner.plan(
+                logicalBounds: logicalBounds,
+                visibleFrame: firstVisibleFrame,
+                viewportSize: viewportSize,
+                screenScale: 2,
+                basePixelsPerLogicalPoint: 2,
+                supersampling: 1.2,
+                tilePixelDimension: 512,
+                prefetchTileRings: 2,
+                maximumTileCount: 96
+            )
+        )
+        let secondPlan = try XCTUnwrap(
+            PaperKitPDFDetailTilePlanner.plan(
+                logicalBounds: logicalBounds,
+                visibleFrame: secondVisibleFrame,
+                viewportSize: viewportSize,
+                screenScale: 2,
+                basePixelsPerLogicalPoint: 2,
+                supersampling: 1.2,
+                tilePixelDimension: 512,
+                prefetchTileRings: 2,
+                maximumTileCount: 96
+            )
+        )
+
+        XCTAssertEqual(firstPlan.level, secondPlan.level)
+        XCTAssertEqual(
+            firstPlan.pixelsPerLogicalPoint,
+            secondPlan.pixelsPerLogicalPoint,
+            accuracy: 0.001
+        )
+
+        let firstKeys = Set(firstPlan.tiles.map(\.key))
+        let secondKeys = Set(secondPlan.tiles.map(\.key))
+        XCTAssertLessThanOrEqual(firstPlan.tiles.count, 96)
+        XCTAssertLessThanOrEqual(secondPlan.tiles.count, 96)
+        XCTAssertFalse(firstKeys.intersection(secondKeys).isEmpty)
+        XCTAssertFalse(secondKeys.subtracting(firstKeys).isEmpty)
+        let firstVisibleCount = firstPlan.tiles.filter(\.isVisible).count
+        let secondVisibleCount = secondPlan.tiles.filter(\.isVisible).count
+        XCTAssertTrue(firstPlan.tiles.prefix(firstVisibleCount).allSatisfy(\.isVisible))
+        XCTAssertTrue(firstPlan.tiles.dropFirst(firstVisibleCount).allSatisfy { !$0.isVisible })
+        XCTAssertTrue(secondPlan.tiles.prefix(secondVisibleCount).allSatisfy(\.isVisible))
+        XCTAssertTrue(secondPlan.tiles.dropFirst(secondVisibleCount).allSatisfy { !$0.isVisible })
+    }
+
+    @available(iOS 26.0, *)
+    func testDetailTilePlanUsesBaseImageWhenItsDensityIsEnough() {
+        let plan = PaperKitPDFDetailTilePlanner.plan(
+            logicalBounds: CGRect(x: 0, y: 0, width: 1_200, height: 1_600),
+            visibleFrame: CGRect(x: 0, y: 0, width: 1_200, height: 1_600),
+            viewportSize: CGSize(width: 1_000, height: 1_300),
+            screenScale: 2,
+            basePixelsPerLogicalPoint: 2,
+            supersampling: 1,
+            tilePixelDimension: 512,
+            prefetchTileRings: 2,
+            maximumTileCount: 96
+        )
+
+        XCTAssertNil(plan)
+    }
 #endif
 
     func testNativePencilKitCanvasUsesPencilOnlyDrawingPolicy() {

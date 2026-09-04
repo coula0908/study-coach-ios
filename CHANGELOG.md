@@ -1,5 +1,26 @@
 # Changelog
 
+## 0.1.19 — Stable high-resolution tiles during fixed-scale pan
+
+- Replace the single adaptive detail bitmap with a page-coordinate tile cache
+  modeled on established `CATiledLayer` and mature PDF-viewer rendering
+  patterns.
+- Separate scale changes from translation: suspend transient render requests
+  during pinch, while retaining already completed tiles on screen.
+- During one-finger pan and inertial scrolling, keep existing sharp tiles and
+  request only missing visible and neighboring tiles at the unchanged level of
+  detail.
+- Use 512-pixel tiles, half-octave detail levels, visible-first ordering, a
+  two-tile prefetch ring, and LRU-bounded reuse of up to 96 completed tiles.
+- Keep the complete bounded page image underneath every tile so an unfinished
+  region never appears white or blank; publish completed tiles without an
+  appearance animation.
+- Remove normal per-render progress/completion messages so background tile
+  work cannot make the reading UI flash during navigation.
+- Add planner tests proving that fixed-scale pans reuse the same detail level
+  and overlapping tile keys and that the base image remains authoritative when
+  its density is sufficient.
+
 ## 0.1.18 — Render once after pan and inertial scrolling end
 
 - Remove the permanent 33-millisecond viewport sampler that made every

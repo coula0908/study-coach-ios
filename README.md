@@ -28,8 +28,9 @@ current implementation removes both custom paths from the production editor.
 - GitHub macOS workflow that compiles the package and tests for an iOS Simulator target
 - An opt-in `StudyCoachPaperKitDiagnosticView` that tests PaperKit independently
   without changing the production PDF app
-- An opt-in `StudyCoachPaperKitPDFDiagnosticView` that tests a tiled PDF page,
-  page-local PaperMarkup, zoom alignment, navigation, and restoration
+- An opt-in `StudyCoachPaperKitPDFDiagnosticView` that tests a complete-page
+  fallback plus cached high-resolution PDF tiles, page-local PaperMarkup, zoom
+  alignment, navigation, and restoration
 
 Runtime behavior still needs to be checked in Swift Playgrounds on the user's iPadOS 26 device. Until that pass is recorded, coordinate alignment and gesture behavior are implemented but not device-verified.
 

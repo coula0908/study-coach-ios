@@ -18,6 +18,29 @@
 Do not mark the MVP complete until the native Pencil input path and the
 remaining acceptance checks pass in Swift Playgrounds on the target iPad.
 
+## Fixed-scale pan tile cache: 0.1.19
+
+- Date: 2026-09-04
+- Physical-device design correction after 0.1.18: pinch and pan must not share
+  one suppression policy; a magnified base page can be uncomfortable to read
+  if all high-resolution detail disappears throughout fixed-scale panning
+- Pinch behavior: retain completed content but schedule no transient-scale
+  tiles until the gesture and zoom bounce finish
+- Pan behavior: preserve completed tiles and request only missing visible and
+  two-ring neighboring coverage at the same discrete level during drag and
+  inertial scrolling
+- Tile policy: 512-pixel renders, half-octave levels, visible-first priority,
+  no-fade publication, complete-page fallback, maximum 96 cached tiles with
+  LRU eviction outside the current wanted set
+- Status policy: no normal progress/completion text per tile
+- Source basis: Apple `CATiledLayer` and archived `ZoomingPDFViewer` sample;
+  Nutrient's published multi-resolution/tile-cache renderer architecture
+- Windows repository validation: passed (`scripts/validate-repository.ps1` and
+  `git diff --check`)
+- Apple toolchain build and simulator tests: pending
+- Physical Swift Playgrounds compilation: pending
+- Physical iPadOS 26 pan/zoom/ink acceptance: pending
+
 ## Pan-end-only detail rendering: 0.1.18
 
 - Date: 2026-09-04

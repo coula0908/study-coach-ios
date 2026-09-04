@@ -8,12 +8,13 @@ The standalone `StudyCoachPaperKitDiagnosticView` passed on the target iPadOS
 26 device. The first PDF diagnostic exposed avoidable custom-renderer costs:
 PDF tiles became visible while pages loaded, the minimum ink width was too
 large, and maximum-zoom input did not preserve the accepted handwriting feel.
-The `0.1.18` diagnostic keeps PaperKit as the sole interaction and markup owner,
+The `0.1.19` diagnostic keeps PaperKit as the sole interaction and markup owner,
 removes `PDFView`, doubles the logical page coordinates, displays a complete
-bounded PDF page image, and atomically replaces the visible region only after
-pan, inertial scrolling, pinch, and zoom bouncing have all ended. It remains
-isolated until the physical iPad acceptance check passes; the existing
-production root stays recoverable and unchanged.
+bounded PDF page image, and overlays a bounded cache of completed
+high-resolution PDF tiles. Pinch does not render transient scales; fixed-scale
+pan and inertia retain sharp tiles and request only missing neighboring
+coverage. It remains isolated until the physical iPad acceptance check passes;
+the existing production root stays recoverable and unchanged.
 
 The production viewer follows Apple's WWDC22 design: one `PDFView` owns PDF
 layout, scrolling, zoom, crop-box transforms, and rotation, while
@@ -113,17 +114,18 @@ production editor. It deliberately uses no `PDFView`:
 3. PaperKit's `contentView` is a page-sized image container below the markup.
 4. A complete four-pixels-per-PDF-point image appears atomically at page load,
    subject to a 4096-pixel side and 14-million-pixel allocation bound.
-5. Version `0.1.18` has no permanent viewport sampler. It observes existing
+5. Version `0.1.19` has no permanent idle viewport sampler. It observes existing
    UIKit pan and pinch recognizers without replacing their delegates or adding
-   another recognizer. During navigation it discards the detail image, and
-   after the gesture plus UIKit deceleration or zoom bounce ends it requests
-   the final visible region once. There is no fixed post-gesture settle delay.
-   The candidate avoids
+   another recognizer. Pinch invalidates pending transient-scale work but keeps
+   completed tiles visible. Fixed-scale pan updates the wanted tile grid during
+   drag and temporary deceleration monitoring. There is no fixed post-gesture
+   settle delay. The candidate avoids
    `PaperMarkupViewController.Delegate` because the physical Swift Playgrounds
    SDK rejects that conformance even when the Xcode 26 SDK accepts it.
-6. One detail render may run while one replaceable latest request waits. Stale
-   results are discarded, so a gesture cannot build an unbounded work queue;
-   the complete base page remains visible throughout.
+6. Detail uses 512-pixel tiles at half-octave level-of-detail steps. The visible
+   grid is ordered first, followed by two neighboring tile rings. One render is
+   active and the pending list is replaced with the newest wanted grid, while
+   completed tiles are retained in an LRU-bounded cache of 96 entries.
 7. The PaperKit coordinate space is twice the PDF crop-box dimensions. PDF
    background transforms multiply PDF points by two; future PDF export divides
    PaperKit points by two.
@@ -135,15 +137,15 @@ confirms page orientation, alignment, system-tool behavior, writing feel,
 base-page appearance, post-zoom sharpening, page restoration, and memory
 stability on a representative study PDF.
 
-### Next renderer direction
+### Current renderer direction
 
 Physical testing showed that scale changes and fixed-scale translation must not
 share one viewport-replacement policy. During pinch, transient zoom levels
 should not trigger detail work. During a pan, however, already sharp content
 must remain available and only newly exposed coverage should be rendered.
 
-The next candidate should retain PaperKit as the only viewport and markup owner,
-keep the complete page image as a no-blank fallback, and add a bounded cached
+The candidate retains PaperKit as the only viewport and markup owner, keeps the
+complete page image as a no-blank fallback, and adds a bounded cached
 tile/level-of-detail layer for the PDF background. Existing tiles move with the
 page at fixed scale; visible and direction-adjacent missing tiles render in the
 background without clearing overlapping sharp tiles. Pinch freezes transient
@@ -151,8 +153,8 @@ level requests and selects the next level only at gesture end. This follows the
 established `CATiledLayer`/PDF-viewer pattern while avoiding the earlier visible
 blank-rectangle failure through the permanent fallback, no-fade publication,
 prefetching, and LRU-bounded reuse. See `HANDOFF.md` for sources, rationale, and
-the physical-device acceptance checklist. This direction is documented but not
-implemented in `0.1.18`.
+the physical-device acceptance checklist. This direction is implemented in the
+isolated `0.1.19` diagnostic but remains physically unverified.
 
 ## Document identity and storage
 
@@ -187,6 +189,14 @@ additional highlighter minimum.
 
 - Apple, ["What's new in PDFKit" (WWDC22)](https://developer.apple.com/videos/play/wwdc2022/10089/):
   the authoritative `PDFPageOverlayViewProvider` plus `PKCanvasView` lifecycle.
+- Apple, [`CATiledLayer`](https://developer.apple.com/documentation/quartzcore/catiledlayer)
+  and the archived `ZoomingPDFViewer` sample: structural basis for bounded,
+  asynchronous PDF tiles and discrete levels of detail. The `0.1.19` Swift
+  implementation is original package code; no sample source was copied.
+- Nutrient, ["Rendering PDFs on Android"](https://www.nutrient.io/blog/rendering-pdfs-on-android/):
+  architectural evidence for retaining and repositioning cached tiles during
+  pan instead of repeatedly rasterizing one whole visible rectangle. No SDK
+  source or dependency is included.
 - [`DannyBehar/PDFViewer`](https://github.com/DannyBehar/PDFViewer) (MIT): a small SwiftUI wrapper confirming the same
   provider boundary; referenced but not added as a package because its current
   Swift toolchain requirement is newer than this package's 5.9 manifest.

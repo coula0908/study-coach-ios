@@ -92,8 +92,8 @@ if ($rootView.Contains('StudyCoachPaperKitDiagnosticView')) {
     throw 'StudyCoachRootView must not route production users into the PaperKit diagnostic.'
 }
 
-if (-not $versionDocument.Contains('Current package version: `0.1.18`')) {
-    throw 'VERSION.md must identify the source tree as package version 0.1.18.'
+if (-not $versionDocument.Contains('Current package version: `0.1.19`')) {
+    throw 'VERSION.md must identify the source tree as package version 0.1.19.'
 }
 
 if ($rootView.Contains('StudyCoachPaperKitPDFDiagnosticView')) {
@@ -105,19 +105,25 @@ foreach ($requiredPaperKitPDFText in @(
     'PaperMarkupViewController('
     'PaperKitPDFPageBackgroundView'
     'PaperKitPDFPageRasterizer'
+    'PaperKitPDFDetailTilePlanner'
     'baseImageView'
-    'detailImageView'
+    'detailTileContainerView'
     'contentVisibleFrame'
     'navigationCompletionTask'
     'descendantNavigationGestureRecognizers'
     'observedNavigationGestureChanged'
     'activeNavigationRecognizerIDs'
+    'activePinchRecognizerIDs'
     'isDecelerating'
     'isZooming'
     'isZoomBouncing'
-    'discardDetailImage()'
-    'detailRenderIsInFlight'
-    'pendingDetailRequest'
+    'updateDetailTiles('
+    'suspendDetailTileRequests()'
+    'cachedDetailTiles'
+    'pendingDetailRequests'
+    'detailTilePixelDimension: CGFloat = 512'
+    'detailPrefetchTileRings = 2'
+    'maximumCachedDetailTiles = 96'
     'logicalPageScale: CGFloat = 2'
     'basePixelsPerPDFPoint: CGFloat = 4'
     'PaperMarkup(dataRepresentation:'
@@ -138,6 +144,10 @@ foreach ($removedViewportDelayText in @(
     'pendingViewportTask'
     'viewportMonitoringTask'
     'viewportSampleNanoseconds'
+    'detailImageView'
+    'discardDetailImage()'
+    'detailRenderIsInFlight'
+    'pendingDetailRequest: DetailRenderRequest?'
     'descendantScrollViews'
     'descendantPinchGestureRecognizers'
     'observedPinchGestureChanged'

@@ -6,9 +6,10 @@ The standalone PaperKit canvas passed on the physical iPadOS 26 device. This
 second isolated diagnostic checks whether a real PDF page and PaperKit ink stay
 aligned and sharp through pan, zoom, page navigation, save, and relaunch. It
 now uses the selected PaperKit-first rendering design: a complete bounded page
-image is always present, and only the visible region is rerendered after pan or
-pinch navigation fully ends. There is no permanent viewport sampler and no
-fixed post-gesture waiting period.
+image is always present underneath a bounded high-resolution tile cache. A
+pinch does not render transient scale values. At a fixed scale, completed tiles
+remain sharp while pan and inertia request only newly exposed neighboring
+coverage. There is no permanent idle sampler and no fixed post-gesture wait.
 
 It does not change `StudyCoachRootView`, the production `PDFKitContainerView`,
 or existing `.drawing` files. Adaptive diagnostic PDFs and PaperMarkup data
@@ -45,12 +46,12 @@ already displayed.
 6. A thin diagonal stroke stays sharp at maximum zoom.
 7. The PDF page first appears as one complete page, never as successively
    appearing white or blank rectangular tiles.
-8. During one-finger pan or two-finger pinch, the complete base page remains
-   visible and no new detail render starts, even when the fingers pause without
-   lifting. After the fingers lift, any inertial scrolling or zoom bounce must
-   also finish before the final visible region is rendered once. There is no
-   additional 0.3-second wait.
-9. The PDF text and lines become sharp again after that rerender completes.
+8. During a two-finger pinch, no new transient-scale tile render starts, even
+   when the fingers pause without lifting. Completed content remains visible;
+   the final level is selected only after the pinch and zoom bounce end.
+9. During one-finger pan and inertial scrolling, already sharp PDF text stays
+   sharp. Newly exposed regions use the complete base page until their
+   high-resolution tiles arrive without a white rectangle or fade.
 10. Ink remains anchored to the same printed word or line while zooming and panning.
 11. Draw on page 1, move to page 2, draw there, and return to page 1.
 12. Both pages restore only their own drawings.
@@ -74,26 +75,29 @@ or their alignment.
   matching the coordinate density of the accepted `0.1.4` standalone test.
 - A complete page image is rendered at four pixels per original PDF point. The
   longest side is capped at 4096 pixels and total output at 14 million pixels.
-- There is no permanent timer or polling task. The diagnostic observes the
+- There is no permanent idle timer or polling task. The diagnostic observes
   existing UIKit pan and pinch recognizers in PaperKit's view hierarchy through
-  added target-action callbacks. It does not replace a gesture delegate, add a
+  target-action callbacks. It does not replace a gesture delegate, add a
   competing recognizer, or change Pencil and finger routing.
-- While a recognizer is active, obsolete detail output is discarded and the
-  complete base page remains stable. After `.ended` or `.cancelled`, a small
-  temporary task checks UIKit's own `isDecelerating`, `isZooming`, and
-  `isZoomBouncing` states only while motion continues.
-- Once UIKit reports no remaining motion, an 18-percent overscanned final
-  visible region is requested once at 1.2 times the physical presentation
-  density, subject to the same allocation bounds.
+- Pinch invalidates pending transient-scale requests without clearing completed
+  tiles. The final scale uses a discrete half-octave level of detail after the
+  pinch and zoom bounce end.
+- At fixed scale, pan callbacks update a stable page-coordinate grid. A short
+  task continues this update only while UIKit reports actual deceleration.
+- Each tile is at most 512 by 512 pixels. Visible tiles are rendered first,
+  followed by two neighboring rings. Completed tiles are retained with LRU
+  eviction outside the current wanted set after a 96-tile bound is exceeded.
 - The diagnostic deliberately does not conform to
   `PaperMarkupViewController.Delegate`: the physical Swift Playgrounds SDK
   rejects that conformance even though Xcode 26 accepts it.
-- Detail work is bounded to one active render and one replaceable pending
-  request. During a gesture and inertial motion, stale results are discarded
-  and no intermediate viewport is submitted, so work cannot accumulate in an
-  unbounded queue.
-- Base and detail images are created on one background rendering queue and
-  installed only after a complete image is ready. No `CATiledLayer` is used.
+- Detail work is bounded to one active render. The pending list is recomputed
+  from the newest wanted grid, so obsolete pan requests do not accumulate.
+- Base and tile images are created on one background rendering queue. A tile is
+  installed only after its complete image is ready and without animation. No
+  `CATiledLayer` is used directly because the diagnostic must suppress
+  transient pinch-scale work explicitly.
+- Normal tile creation does not change the user-facing status message; only an
+  initial base-page result or the first tile failure is reported.
 - The same PaperKit transform applies to the PDF content view and its ink.
 - Page data uses the PDF file's SHA-256 identity and zero-based page index.
 - Writes use `PaperMarkup.dataRepresentation()` and atomic local file writes.

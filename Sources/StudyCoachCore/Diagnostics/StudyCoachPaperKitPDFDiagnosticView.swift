@@ -14,8 +14,8 @@ import UniformTypeIdentifiers
 ///
 /// PDFView is intentionally absent. PaperKit owns scrolling, zooming, tools,
 /// and Pencil input. A complete base image prevents tile-shaped page loading;
-/// visible-frame changes immediately request an atomic rerender from the
-/// original PDF at the device's presentation resolution.
+/// completed high-resolution PDF tiles remain anchored to page coordinates
+/// during fixed-scale pan, while transient pinch scales do not render.
 ///
 /// The production `StudyCoachRootView` and its PencilKit overlays are not used
 /// or modified by this diagnostic.
@@ -376,6 +376,7 @@ private final class PaperKitPDFPageViewController: UIViewController {
     private var lastViewportSize = CGSize.zero
     private var observedNavigationRecognizers: [UIGestureRecognizer] = []
     private var activeNavigationRecognizerIDs: Set<ObjectIdentifier> = []
+    private var activePinchRecognizerIDs: Set<ObjectIdentifier> = []
 
     init(
         page: PDFPage,
@@ -464,7 +465,7 @@ private final class PaperKitPDFPageViewController: UIViewController {
         backgroundView.onBaseImageReady = { [weak self] in
             guard let self else { return }
             self.lastSubmittedVisibleFrame = .null
-            self.renderCurrentViewport()
+            self.updateCurrentViewportTiles()
         }
         backgroundView.prepareBaseImage()
 
@@ -493,7 +494,7 @@ private final class PaperKitPDFPageViewController: UIViewController {
         paperController.pencilKitResponderState.toolPickerVisibility = .visible
         paperController.becomeFirstResponder()
         installNavigationObservationIfNeeded()
-        renderCurrentViewport()
+        updateCurrentViewportTiles()
     }
 
     override func viewDidLayoutSubviews() {
@@ -504,7 +505,7 @@ private final class PaperKitPDFPageViewController: UIViewController {
         guard viewportSize != lastViewportSize else { return }
         lastViewportSize = viewportSize
         lastSubmittedVisibleFrame = .null
-        renderCurrentViewport()
+        updateCurrentViewportTiles()
     }
 
     override func viewWillDisappear(_ animated: Bool) {
@@ -544,8 +545,8 @@ private final class PaperKitPDFPageViewController: UIViewController {
         }
     }
 
-    private func renderCurrentViewport() {
-        guard activeNavigationRecognizerIDs.isEmpty else { return }
+    private func updateCurrentViewportTiles() {
+        guard !isPinchActive else { return }
 
         let visibleFrame = paperController.contentVisibleFrame.standardized
             .intersection(backgroundView.bounds)
@@ -556,7 +557,7 @@ private final class PaperKitPDFPageViewController: UIViewController {
         }
         lastSubmittedVisibleFrame = visibleFrame
 
-        backgroundView.requestDetailImage(
+        backgroundView.updateDetailTiles(
             for: visibleFrame,
             viewportSize: paperController.view.bounds.size
         )
@@ -586,6 +587,7 @@ private final class PaperKitPDFPageViewController: UIViewController {
         }
         observedNavigationRecognizers.removeAll()
         activeNavigationRecognizerIDs.removeAll()
+        activePinchRecognizerIDs.removeAll()
     }
 
     @objc
@@ -595,21 +597,57 @@ private final class PaperKitPDFPageViewController: UIViewController {
         case .began, .changed:
             navigationCompletionTask?.cancel()
             navigationCompletionTask = nil
-            if activeNavigationRecognizerIDs.insert(recognizerID).inserted {
+            let becameActive = activeNavigationRecognizerIDs.insert(recognizerID).inserted
+
+            if recognizer is UIPinchGestureRecognizer {
+                let pinchBecameActive = activePinchRecognizerIDs
+                    .insert(recognizerID)
+                    .inserted
+                if pinchBecameActive {
+                    // Keep completed tiles visible and scaled by PaperKit, but
+                    // cancel requests for transient pinch scales.
+                    backgroundView.suspendDetailTileRequests()
+                }
                 lastSubmittedVisibleFrame = .null
-                backgroundView.discardDetailImage()
+            } else if recognizer is UIPanGestureRecognizer,
+                      !isPinchActive {
+                // At a fixed scale, keep sharp tiles and request only missing
+                // coverage as the page moves.
+                if becameActive {
+                    lastSubmittedVisibleFrame = .null
+                }
+                updateCurrentViewportTiles()
             }
         case .ended, .cancelled:
             activeNavigationRecognizerIDs.remove(recognizerID)
+            activePinchRecognizerIDs.remove(recognizerID)
             if activeNavigationRecognizerIDs.isEmpty {
                 renderAfterNavigationSettles(in: recognizer.owningScrollView)
             }
         case .failed:
             activeNavigationRecognizerIDs.remove(recognizerID)
+            activePinchRecognizerIDs.remove(recognizerID)
         case .possible:
             break
         @unknown default:
             activeNavigationRecognizerIDs.remove(recognizerID)
+            activePinchRecognizerIDs.remove(recognizerID)
+        }
+    }
+
+    private var isPinchActive: Bool {
+        if !activePinchRecognizerIDs.isEmpty {
+            return true
+        }
+        if observedNavigationRecognizers.contains(where: { recognizer in
+            guard recognizer is UIPinchGestureRecognizer else { return false }
+            return recognizer.state == .began || recognizer.state == .changed
+        }) {
+            return true
+        }
+        return observedNavigationRecognizers.contains { recognizer in
+            guard let scrollView = recognizer.owningScrollView else { return false }
+            return scrollView.isZooming || scrollView.isZoomBouncing
         }
     }
 
@@ -624,16 +662,24 @@ private final class PaperKitPDFPageViewController: UIViewController {
                 guard let self else { return }
                 guard self.activeNavigationRecognizerIDs.isEmpty else { return }
 
-                let isStillMoving = scrollView.map {
-                    $0.isTracking
-                        || $0.isDragging
-                        || $0.isDecelerating
-                        || $0.isZooming
-                        || $0.isZoomBouncing
+                let isScaleStillChanging = scrollView.map {
+                    $0.isZooming || $0.isZoomBouncing
                 } ?? false
+                let isTranslationStillMoving = scrollView.map {
+                    $0.isTracking || $0.isDragging || $0.isDecelerating
+                } ?? false
+
+                // Deceleration changes only position, so cached tiles stay
+                // valid and missing coverage can be requested as it appears.
+                if !isScaleStillChanging {
+                    self.updateCurrentViewportTiles()
+                }
+
+                let isStillMoving = isScaleStillChanging || isTranslationStillMoving
                 guard isStillMoving else {
                     self.navigationCompletionTask = nil
-                    self.renderCurrentViewport()
+                    self.lastSubmittedVisibleFrame = .null
+                    self.updateCurrentViewportTiles()
                     return
                 }
 
@@ -647,8 +693,12 @@ private final class PaperKitPDFPageViewController: UIViewController {
 private final class PaperKitPDFPageBackgroundView: UIView {
     private struct DetailRenderRequest {
         let generation: Int
-        let rect: CGRect
-        let pixelsPerLogicalPoint: CGFloat
+        let tile: PaperKitPDFDetailTilePlan.Tile
+    }
+
+    private struct CachedTile {
+        let imageView: UIImageView
+        var lastAccess: Int
     }
 
     private static let renderQueue = DispatchQueue(
@@ -656,8 +706,10 @@ private final class PaperKitPDFPageBackgroundView: UIView {
         qos: .userInitiated
     )
     private static let basePixelsPerPDFPoint: CGFloat = 4
-    private static let detailOverscanRatio: CGFloat = 0.18
     private static let detailSupersampling: CGFloat = 1.2
+    private static let detailTilePixelDimension: CGFloat = 512
+    private static let detailPrefetchTileRings = 2
+    private static let maximumCachedDetailTiles = 96
     private static let maximumPixelDimension: CGFloat = 4_096
     private static let maximumPixelCount: CGFloat = 14_000_000
 
@@ -667,11 +719,18 @@ private final class PaperKitPDFPageBackgroundView: UIView {
     private let logicalScale: CGFloat
     private let rasterizer: PaperKitPDFPageRasterizer
     private let baseImageView = UIImageView()
-    private let detailImageView = UIImageView()
+    private let detailTileContainerView = UIView()
     private let activityIndicator = UIActivityIndicatorView(style: .medium)
     private var detailRenderGeneration = 0
-    private var detailRenderIsInFlight = false
-    private var pendingDetailRequest: DetailRenderRequest?
+    private var activeDetailRequest: DetailRenderRequest?
+    private var pendingDetailRequests: [DetailRenderRequest] = []
+    private var cachedDetailTiles: [PaperKitPDFDetailTileKey: CachedTile] = [:]
+    private var currentWantedTileKeys: Set<PaperKitPDFDetailTileKey> = []
+    private var currentVisibleTileKeys: Set<PaperKitPDFDetailTileKey> = []
+    private var targetDetailLevel: Int?
+    private var targetDetailLevelIsPublished = false
+    private var tileAccessCounter = 0
+    private var hasReportedTileFailure = false
     private var baseRenderStarted = false
     private var baseImageIsReady = false
 
@@ -693,11 +752,12 @@ private final class PaperKitPDFPageBackgroundView: UIView {
         baseImageView.isOpaque = true
         addSubview(baseImageView)
 
-        detailImageView.backgroundColor = .clear
-        detailImageView.contentMode = .scaleToFill
-        detailImageView.isHidden = true
-        detailImageView.isUserInteractionEnabled = false
-        addSubview(detailImageView)
+        detailTileContainerView.frame = bounds
+        detailTileContainerView.autoresizingMask = [.flexibleWidth, .flexibleHeight]
+        detailTileContainerView.backgroundColor = .clear
+        detailTileContainerView.isUserInteractionEnabled = false
+        detailTileContainerView.clipsToBounds = true
+        addSubview(detailTileContainerView)
 
         activityIndicator.center = CGPoint(x: bounds.midX, y: bounds.midY)
         activityIndicator.autoresizingMask = [
@@ -743,7 +803,7 @@ private final class PaperKitPDFPageBackgroundView: UIView {
                 self.baseImageView.image = image
                 self.baseImageIsReady = true
                 self.onStatusChange?(
-                    "전체 페이지 준비 완료 · 이동이 끝나면 고해상도로 갱신됩니다.",
+                    "전체 페이지 준비 완료 · 확대와 이동 선명도를 자동으로 유지합니다.",
                     false
                 )
                 self.onBaseImageReady?()
@@ -751,89 +811,342 @@ private final class PaperKitPDFPageBackgroundView: UIView {
         }
     }
 
-    func requestDetailImage(for visibleFrame: CGRect, viewportSize: CGSize) {
-        discardDetailImage()
+    func updateDetailTiles(for visibleFrame: CGRect, viewportSize: CGSize) {
         guard baseImageIsReady,
               visibleFrame.isUsableViewport,
               viewportSize.width > 0,
               viewportSize.height > 0 else { return }
 
-        let horizontalPresentationScale = viewportSize.width / visibleFrame.width
-        let verticalPresentationScale = viewportSize.height / visibleFrame.height
-        let presentationScale = max(horizontalPresentationScale, verticalPresentationScale)
-        let desiredPixelsPerLogicalPoint = presentationScale
-            * UIScreen.main.scale
-            * Self.detailSupersampling
         let basePixelsPerLogicalPoint = Self.basePixelsPerPDFPoint / logicalScale
-
-        guard desiredPixelsPerLogicalPoint > basePixelsPerLogicalPoint * 1.1 else {
-            onStatusChange?("기본 페이지 해상도로 선명하게 표시 중", false)
+        guard let plan = PaperKitPDFDetailTilePlanner.plan(
+            logicalBounds: bounds,
+            visibleFrame: visibleFrame,
+            viewportSize: viewportSize,
+            screenScale: UIScreen.main.scale,
+            basePixelsPerLogicalPoint: basePixelsPerLogicalPoint,
+            supersampling: Self.detailSupersampling,
+            tilePixelDimension: Self.detailTilePixelDimension,
+            prefetchTileRings: Self.detailPrefetchTileRings,
+            maximumTileCount: Self.maximumCachedDetailTiles
+        ) else {
+            showBaseResolutionOnly()
             return
         }
 
-        let horizontalOverscan = visibleFrame.width * Self.detailOverscanRatio
-        let verticalOverscan = visibleFrame.height * Self.detailOverscanRatio
-        let detailRect = visibleFrame
-            .insetBy(dx: -horizontalOverscan, dy: -verticalOverscan)
-            .intersection(bounds)
-        guard detailRect.isUsableViewport else { return }
+        if targetDetailLevel != plan.level {
+            detailRenderGeneration += 1
+            targetDetailLevel = plan.level
+            targetDetailLevelIsPublished = false
+            pendingDetailRequests.removeAll()
+            hasReportedTileFailure = false
+            for (key, cachedTile) in cachedDetailTiles where key.level == plan.level {
+                cachedTile.imageView.isHidden = true
+            }
+        }
 
-        onStatusChange?("확대 영역을 원본 PDF에서 선명하게 만드는 중…", false)
-        pendingDetailRequest = DetailRenderRequest(
-            generation: detailRenderGeneration,
-            rect: detailRect,
-            pixelsPerLogicalPoint: desiredPixelsPerLogicalPoint
+        currentWantedTileKeys = Set(plan.tiles.map(\.key))
+        currentVisibleTileKeys = Set(
+            plan.tiles.lazy.filter(\.isVisible).map(\.key)
         )
+        tileAccessCounter += 1
+        let access = tileAccessCounter
+        for key in currentWantedTileKeys {
+            guard var cachedTile = cachedDetailTiles[key] else { continue }
+            cachedTile.lastAccess = access
+            cachedDetailTiles[key] = cachedTile
+            // Cached tiles from a level revisited after zooming must sit above
+            // obsolete levels, while still leaving gaps backed by the base page.
+            detailTileContainerView.bringSubviewToFront(cachedTile.imageView)
+        }
+
+        let activeKey: PaperKitPDFDetailTileKey?
+        if activeDetailRequest?.generation == detailRenderGeneration {
+            activeKey = activeDetailRequest?.tile.key
+        } else {
+            activeKey = nil
+        }
+
+        pendingDetailRequests = plan.tiles.compactMap { tile in
+            guard cachedDetailTiles[tile.key] == nil,
+                  tile.key != activeKey else { return nil }
+            return DetailRenderRequest(
+                generation: detailRenderGeneration,
+                tile: tile
+            )
+        }
+
+        publishTargetLevelIfReady()
+        evictCachedTilesIfNeeded()
         startNextDetailRenderIfNeeded()
     }
 
-    func discardDetailImage() {
+    /// Stop work for transient pinch scales without removing completed tiles.
+    /// PaperKit keeps transforming those stable tiles until the final scale is
+    /// known and a new level can be selected.
+    func suspendDetailTileRequests() {
         detailRenderGeneration += 1
-        pendingDetailRequest = nil
-        detailImageView.isHidden = true
-        detailImageView.image = nil
+        targetDetailLevel = nil
+        targetDetailLevelIsPublished = false
+        pendingDetailRequests.removeAll()
+        currentWantedTileKeys.removeAll()
+        currentVisibleTileKeys.removeAll()
+    }
+
+    private func showBaseResolutionOnly() {
+        detailRenderGeneration += 1
+        targetDetailLevel = nil
+        targetDetailLevelIsPublished = false
+        pendingDetailRequests.removeAll()
+        currentWantedTileKeys.removeAll()
+        currentVisibleTileKeys.removeAll()
+        removeAllCachedDetailTiles()
     }
 
     private func startNextDetailRenderIfNeeded() {
-        guard !detailRenderIsInFlight, let request = pendingDetailRequest else { return }
-        pendingDetailRequest = nil
-        detailRenderIsInFlight = true
+        guard activeDetailRequest == nil,
+              !pendingDetailRequests.isEmpty else { return }
+        let request = pendingDetailRequests.removeFirst()
+        activeDetailRequest = request
 
         let rasterizer = rasterizer
-        let maximumPixelDimension = Self.maximumPixelDimension
-        let maximumPixelCount = Self.maximumPixelCount
+        let tilePixelDimension = Self.detailTilePixelDimension
         Self.renderQueue.async { [weak self] in
             let image = rasterizer.render(
-                logicalRect: request.rect,
-                pixelsPerLogicalPoint: request.pixelsPerLogicalPoint,
-                maximumPixelDimension: maximumPixelDimension,
-                maximumPixelCount: maximumPixelCount
+                logicalRect: request.tile.rect,
+                pixelsPerLogicalPoint: request.tile.pixelsPerLogicalPoint,
+                maximumPixelDimension: tilePixelDimension,
+                maximumPixelCount: tilePixelDimension * tilePixelDimension
             )
             DispatchQueue.main.async {
                 guard let self else { return }
-                self.detailRenderIsInFlight = false
+                self.activeDetailRequest = nil
 
-                if request.generation == self.detailRenderGeneration {
+                if request.generation == self.detailRenderGeneration,
+                   request.tile.key.level == self.targetDetailLevel {
                     if let image {
-                        UIView.performWithoutAnimation {
-                            self.detailImageView.frame = request.rect
-                            self.detailImageView.image = image
-                            self.detailImageView.isHidden = false
-                        }
-                        self.onStatusChange?("확대 영역 고해상도 표시 완료", false)
-                    } else {
+                        self.install(image, for: request.tile)
+                    } else if !self.hasReportedTileFailure {
+                        self.hasReportedTileFailure = true
                         self.onStatusChange?(
-                            "확대 영역 렌더링에 실패했습니다. 기본 페이지를 유지합니다.",
+                            "일부 고해상도 영역을 만들지 못해 기본 페이지를 유지합니다.",
                             true
                         )
                     }
                 }
 
-                // A gesture can change the viewport many times while one render is
-                // running. Only the newest pending request is retained and starts now.
+                self.publishTargetLevelIfReady()
+                self.evictCachedTilesIfNeeded()
                 self.startNextDetailRenderIfNeeded()
             }
         }
+    }
+
+    private func install(_ image: UIImage, for tile: PaperKitPDFDetailTilePlan.Tile) {
+        guard cachedDetailTiles[tile.key] == nil else { return }
+
+        let imageView = UIImageView(frame: tile.rect)
+        imageView.backgroundColor = .white
+        imageView.contentMode = .scaleToFill
+        imageView.isOpaque = true
+        imageView.isUserInteractionEnabled = false
+        imageView.layer.magnificationFilter = .linear
+        imageView.layer.minificationFilter = .linear
+        imageView.image = image
+        imageView.isHidden = !targetDetailLevelIsPublished
+
+        tileAccessCounter += 1
+        cachedDetailTiles[tile.key] = CachedTile(
+            imageView: imageView,
+            lastAccess: tileAccessCounter
+        )
+        UIView.performWithoutAnimation {
+            detailTileContainerView.addSubview(imageView)
+        }
+    }
+
+    private func publishTargetLevelIfReady() {
+        guard !targetDetailLevelIsPublished,
+              let targetDetailLevel,
+              !currentVisibleTileKeys.isEmpty,
+              currentVisibleTileKeys.allSatisfy({ cachedDetailTiles[$0] != nil }) else {
+            return
+        }
+
+        targetDetailLevelIsPublished = true
+        UIView.performWithoutAnimation {
+            for (key, cachedTile) in cachedDetailTiles
+                where key.level == targetDetailLevel {
+                cachedTile.imageView.isHidden = false
+                detailTileContainerView.bringSubviewToFront(cachedTile.imageView)
+            }
+        }
+    }
+
+    private func evictCachedTilesIfNeeded() {
+        while cachedDetailTiles.count > Self.maximumCachedDetailTiles {
+            let evictionCandidate = cachedDetailTiles
+                .filter { !currentWantedTileKeys.contains($0.key) }
+                .min { $0.value.lastAccess < $1.value.lastAccess }
+            guard let evictionCandidate else { return }
+            evictionCandidate.value.imageView.removeFromSuperview()
+            cachedDetailTiles.removeValue(forKey: evictionCandidate.key)
+        }
+    }
+
+    private func removeAllCachedDetailTiles() {
+        for cachedTile in cachedDetailTiles.values {
+            cachedTile.imageView.removeFromSuperview()
+        }
+        cachedDetailTiles.removeAll()
+    }
+}
+
+@available(iOS 26.0, *)
+struct PaperKitPDFDetailTileKey: Hashable {
+    let level: Int
+    let column: Int
+    let row: Int
+}
+
+@available(iOS 26.0, *)
+struct PaperKitPDFDetailTilePlan {
+    struct Tile {
+        let key: PaperKitPDFDetailTileKey
+        let rect: CGRect
+        let pixelsPerLogicalPoint: CGFloat
+        let isVisible: Bool
+        let distanceFromViewportCenterSquared: CGFloat
+    }
+
+    let level: Int
+    let pixelsPerLogicalPoint: CGFloat
+    let tiles: [Tile]
+}
+
+@available(iOS 26.0, *)
+enum PaperKitPDFDetailTilePlanner {
+    /// Build a stable, discrete level-of-detail grid. A half-octave step keeps
+    /// pixel density within about 1.414× of the requested density while making
+    /// nearby zoom results share the same reusable tile coordinates.
+    static func plan(
+        logicalBounds: CGRect,
+        visibleFrame: CGRect,
+        viewportSize: CGSize,
+        screenScale: CGFloat,
+        basePixelsPerLogicalPoint: CGFloat,
+        supersampling: CGFloat,
+        tilePixelDimension: CGFloat,
+        prefetchTileRings: Int,
+        maximumTileCount: Int
+    ) -> PaperKitPDFDetailTilePlan? {
+        let bounds = logicalBounds.standardized
+        let visibleFrame = visibleFrame.standardized.intersection(bounds)
+        guard bounds.isUsableViewport,
+              visibleFrame.isUsableViewport,
+              viewportSize.width > 0,
+              viewportSize.height > 0,
+              screenScale > 0,
+              basePixelsPerLogicalPoint > 0,
+              supersampling > 0,
+              tilePixelDimension > 0,
+              maximumTileCount > 0 else { return nil }
+
+        let horizontalPresentationScale = viewportSize.width / visibleFrame.width
+        let verticalPresentationScale = viewportSize.height / visibleFrame.height
+        let presentationScale = max(horizontalPresentationScale, verticalPresentationScale)
+        let desiredPixelsPerLogicalPoint = presentationScale
+            * screenScale
+            * supersampling
+
+        guard desiredPixelsPerLogicalPoint > basePixelsPerLogicalPoint * 1.1 else {
+            return nil
+        }
+
+        let levelStep = sqrt(2.0)
+        let densityRatio = desiredPixelsPerLogicalPoint / basePixelsPerLogicalPoint
+        let level = max(
+            1,
+            Int(ceil(log(Double(densityRatio)) / log(levelStep)))
+        )
+        let pixelsPerLogicalPoint = basePixelsPerLogicalPoint
+            * CGFloat(pow(levelStep, Double(level)))
+        let tileLogicalDimension = tilePixelDimension / pixelsPerLogicalPoint
+        guard tileLogicalDimension.isFinite, tileLogicalDimension > 0 else { return nil }
+
+        let prefetchDistance = tileLogicalDimension * CGFloat(max(0, prefetchTileRings))
+        let coverage = visibleFrame
+            .insetBy(dx: -prefetchDistance, dy: -prefetchDistance)
+            .intersection(bounds)
+        guard coverage.isUsableViewport else { return nil }
+
+        let minimumColumn = max(0, Int(floor(coverage.minX / tileLogicalDimension)))
+        let maximumColumn = max(
+            minimumColumn,
+            Int(ceil(coverage.maxX / tileLogicalDimension)) - 1
+        )
+        let minimumRow = max(0, Int(floor(coverage.minY / tileLogicalDimension)))
+        let maximumRow = max(
+            minimumRow,
+            Int(ceil(coverage.maxY / tileLogicalDimension)) - 1
+        )
+        let viewportCenter = CGPoint(x: visibleFrame.midX, y: visibleFrame.midY)
+
+        var tiles: [PaperKitPDFDetailTilePlan.Tile] = []
+        for row in minimumRow...maximumRow {
+            for column in minimumColumn...maximumColumn {
+                let rawRect = CGRect(
+                    x: CGFloat(column) * tileLogicalDimension,
+                    y: CGFloat(row) * tileLogicalDimension,
+                    width: tileLogicalDimension,
+                    height: tileLogicalDimension
+                )
+                let rect = rawRect.intersection(bounds)
+                guard rect.isUsableViewport else { continue }
+
+                let horizontalDistance = rect.midX - viewportCenter.x
+                let verticalDistance = rect.midY - viewportCenter.y
+                tiles.append(
+                    PaperKitPDFDetailTilePlan.Tile(
+                        key: PaperKitPDFDetailTileKey(
+                            level: level,
+                            column: column,
+                            row: row
+                        ),
+                        rect: rect,
+                        pixelsPerLogicalPoint: pixelsPerLogicalPoint,
+                        isVisible: rect.intersects(visibleFrame),
+                        distanceFromViewportCenterSquared:
+                            horizontalDistance * horizontalDistance
+                            + verticalDistance * verticalDistance
+                    )
+                )
+            }
+        }
+
+        tiles.sort { lhs, rhs in
+            if lhs.isVisible != rhs.isVisible {
+                return lhs.isVisible
+            }
+            if lhs.distanceFromViewportCenterSquared
+                != rhs.distanceFromViewportCenterSquared {
+                return lhs.distanceFromViewportCenterSquared
+                    < rhs.distanceFromViewportCenterSquared
+            }
+            if lhs.key.row != rhs.key.row {
+                return lhs.key.row < rhs.key.row
+            }
+            return lhs.key.column < rhs.key.column
+        }
+
+        if tiles.count > maximumTileCount {
+            tiles = Array(tiles.prefix(maximumTileCount))
+        }
+
+        return PaperKitPDFDetailTilePlan(
+            level: level,
+            pixelsPerLogicalPoint: pixelsPerLogicalPoint,
+            tiles: tiles
+        )
     }
 }
 
