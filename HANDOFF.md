@@ -34,9 +34,9 @@ old version and tag values.
 - Repository: `https://github.com/coula0908/study-coach-ios`
 - Active local branch: `codex/paperkit-adaptive-background`
 - Remote development branch: `main`
-- Latest installable package tag: `0.1.21`
-- Latest runtime implementation commit: `32121e2` — precise native PaperKit
-  tool state, note-app toolbar, direct Pencil actions, and structured insertion
+- Latest installable package tag: `0.1.22`
+- Latest runtime implementation commit: `e69031b` — first-frame-safe PaperKit
+  tool activation over the `0.1.21` note-app toolbar
 - Latest researched toolbar-design commit: `1a14d92` — StudyCoach-owned exact
   native tools, direct Pencil interactions, structured insertion, and feature
   capability boundaries
@@ -65,9 +65,10 @@ old version and tag values.
   The leading code-level regression candidate is repeated/too-early
   `PaperMarkupViewController.drawingTool` assignment through
   `UIViewControllerRepresentable.updateUIViewController -> proxy.attach`.
-  A narrow launch hotfix is in progress: defer the initial tool assignment
-  until the controller is on-screen and skip an identical already-applied
-  palette state. Preserve the PDF renderer, stored PDF, and PaperMarkup files.
+  The `0.1.22` candidate defers the initial tool assignment until after the
+  controller is on-screen and skips an identical already-applied palette state.
+  Apple CI passed; physical launch confirmation is the next action. The PDF
+  renderer, stored PDF, and PaperMarkup files are preserved.
 - `0.1.21` implementation and Apple CI are complete. It includes the polished
   document bar/tool dock/context tray, exact 10-step ink and eraser widths,
   editable quick colors, marker azimuth, three eraser modes, lasso, direct
@@ -106,7 +107,8 @@ old version and tag values.
   unapproved working drafts; do not implement from them before that review.
 - `docs/DEVELOPMENT_SEQUENCE.md` records the decided implementation order:
   `0.1.20` minimal custom-tool bridge, `0.1.21` complete note-style toolbar,
-  `0.1.22` PDF geometry normalization, `0.1.23` autosave/recovery, and only
+  `0.1.22` launch hotfix, `0.1.23` PDF geometry normalization, `0.1.24`
+  autosave/recovery, and only
   then `0.2.0` promotion into `StudyCoachRootView()`. Later phases add the
   library/page model, editing/export, study/OCR, audio/sync, and AI. Keep one
   risky subsystem per physical-device test version.

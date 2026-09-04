@@ -14,7 +14,10 @@
   baseline for fine-grained native tool settings
 - Precise note-app toolbar candidate: `0.1.21` passed Xcode 16 fallback,
   Xcode 26 normal and strict Swift 6 builds, and both iPad Simulator test jobs;
-  physical Swift Playgrounds and Apple Pencil acceptance are pending
+  physical Swift Playgrounds failed before the first visible frame with a
+  five-second preview update watchdog report
+- First-frame activation hotfix: `0.1.22` passed Windows validation and the
+  full Apple CI matrix; physical Swift Playgrounds launch is pending
 - Native PDFKit/PencilKit revision: Xcode 16.4 and Xcode 26.6 builds and iPad
   Simulator tests passed on 2026-09-02; the `0.1.7` physical iPadOS 26 retest
   confirmed the delegate crash is fixed and Apple Pencil writing works, but
@@ -23,6 +26,33 @@
 
 Do not mark the MVP complete until the native Pencil input path and the
 remaining acceptance checks pass in Swift Playgrounds on the target iPad.
+
+## Swift Playgrounds first-frame activation hotfix: 0.1.22
+
+- Date: 2026-09-05
+- Physical `0.1.21` result: launch and preview stayed black, followed by
+  `Updating a preview ... took more than 5 seconds`
+- Evidence boundary: that message is the Preview pipeline watchdog result and
+  does not contain the blocked call stack or establish the root cause alone
+- Leading regression candidate: `UIViewControllerRepresentable` updates called
+  `proxy.attach`, which immediately reassigned
+  `PaperMarkupViewController.drawingTool` and first responder even before the
+  controller had reached a window; normal renderer status publication could
+  repeat that path
+- Hotfix: ignore tool application before the controller is visible, yield one
+  main-actor turn after `viewDidAppear`, and skip an identical already-applied
+  palette state
+- Unchanged: stored PDFs, stored PaperMarkup, all `0.1.21` toolbar and tool
+  settings, page geometry, zoom/pan behavior, and PDF base/tile renderer
+- Runtime hotfix commit: `e69031b`
+- Workflow run:
+  <https://github.com/coula0908/study-coach-ios/actions/runs/33888528028>
+- Xcode 16 fallback build and iPad Simulator tests: passed
+- Xcode 26 normal build, strict Swift 6 concurrency build, and iPad Simulator
+  tests: passed
+- Windows repository validation and `git diff --check`: passed
+- Physical Swift Playgrounds launch: pending; only that result can confirm or
+  reject the proposed launch-stall cause
 
 ## Precise note-app toolbar and structured insertion: 0.1.21
 

@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.1.22 — Swift Playgrounds first-frame hotfix
+
+- Fix the physical `0.1.21` launch regression where Swift Playgrounds showed a
+  black screen and stopped the preview after an update exceeded five seconds.
+- Do not assign `PaperMarkupViewController.drawingTool` while SwiftUI is still
+  creating or updating the controller representable.
+- Return the first visible frame, then activate the current tool on the next
+  main-actor turn.
+- Cache the last applied palette state so renderer status and unrelated SwiftUI
+  updates cannot repeatedly reassign the same PaperKit tool or first responder.
+- Preserve the `0.1.21` toolbar, all stored PDF/PaperMarkup data, the accepted
+  renderer, and every approved tool setting. Physical iPad confirmation of the
+  hotfix remains required.
+
 ## 0.1.21 — Precise note-app toolbar and structured content
 
 - Replace the isolated diagnostic's rough StudyCoach/Apple A/B toolbar with a
