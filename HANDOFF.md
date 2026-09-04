@@ -59,6 +59,15 @@ old version and tag values.
 
 ## In Progress
 
+- Physical `0.1.21` launch failed before the first visible frame in Swift
+  Playgrounds with `Updating took more than 5 seconds`; the preview also stayed
+  black. The screenshot is a preview watchdog report, not a root-cause stack.
+  The leading code-level regression candidate is repeated/too-early
+  `PaperMarkupViewController.drawingTool` assignment through
+  `UIViewControllerRepresentable.updateUIViewController -> proxy.attach`.
+  A narrow launch hotfix is in progress: defer the initial tool assignment
+  until the controller is on-screen and skip an identical already-applied
+  palette state. Preserve the PDF renderer, stored PDF, and PaperMarkup files.
 - `0.1.21` implementation and Apple CI are complete. It includes the polished
   document bar/tool dock/context tray, exact 10-step ink and eraser widths,
   editable quick colors, marker azimuth, three eraser modes, lasso, direct

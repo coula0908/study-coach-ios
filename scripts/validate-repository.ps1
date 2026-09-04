@@ -135,6 +135,9 @@ foreach ($requiredPaperKitPDFText in @(
     'paperController.drawingTool = PKLassoTool()'
     'UIPencilInteraction(delegate: self)'
     'UIPencilInteraction.preferredTapAction'
+    'isPaletteActivationReady'
+    'lastAppliedPaletteState'
+    'await Task.yield()'
     'insertNewTextbox('
     'insertNewImage('
 )) {

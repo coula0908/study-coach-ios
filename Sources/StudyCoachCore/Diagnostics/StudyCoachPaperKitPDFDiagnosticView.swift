@@ -958,6 +958,9 @@ private final class PaperKitPDFPageViewController: UIViewController {
     private let paperController: PaperMarkupViewController
     private let backgroundView: PaperKitPDFPageBackgroundView
     private var pencilInteraction: UIPencilInteraction?
+    private var paletteActivationTask: Task<Void, Never>?
+    private var isPaletteActivationReady = false
+    private var lastAppliedPaletteState: StudyCoachToolPaletteState?
     private var navigationCompletionTask: Task<Void, Never>?
     private var lastSubmittedVisibleFrame = CGRect.null
     private var lastViewportSize = CGSize.zero
@@ -1062,10 +1065,23 @@ private final class PaperKitPDFPageViewController: UIViewController {
 
     override func viewDidAppear(_ animated: Bool) {
         super.viewDidAppear(animated)
-        applyPaletteState(proxy?.paletteState ?? StudyCoachToolPaletteState())
-        paperController.becomeFirstResponder()
         installNavigationObservationIfNeeded()
         updateCurrentViewportTiles()
+
+        paletteActivationTask?.cancel()
+        paletteActivationTask = Task { @MainActor [weak self] in
+            // Returning the first visible frame before changing PaperKit's
+            // drawing tool avoids doing responder/editor activation inside a
+            // SwiftUI representable update transaction.
+            await Task.yield()
+            guard let self, !Task.isCancelled else { return }
+            self.isPaletteActivationReady = true
+            self.applyPaletteState(
+                self.proxy?.paletteState ?? StudyCoachToolPaletteState()
+            )
+            self.paperController.becomeFirstResponder()
+            self.paletteActivationTask = nil
+        }
     }
 
     override func viewDidLayoutSubviews() {
@@ -1081,6 +1097,9 @@ private final class PaperKitPDFPageViewController: UIViewController {
 
     override func viewWillDisappear(_ animated: Bool) {
         super.viewWillDisappear(animated)
+        isPaletteActivationReady = false
+        paletteActivationTask?.cancel()
+        paletteActivationTask = nil
         navigationCompletionTask?.cancel()
         navigationCompletionTask = nil
         removeNavigationObservation()
@@ -1117,6 +1136,11 @@ private final class PaperKitPDFPageViewController: UIViewController {
     }
 
     func applyPaletteState(_ state: StudyCoachToolPaletteState) {
+        guard isPaletteActivationReady,
+              isViewLoaded,
+              view.window != nil,
+              state != lastAppliedPaletteState else { return }
+
         switch state.selectedTool {
         case .pen:
             let type = PKInkingTool.InkType.pen
@@ -1147,9 +1171,8 @@ private final class PaperKitPDFPageViewController: UIViewController {
         case .lasso, .text, .image:
             paperController.drawingTool = PKLassoTool()
         }
-        if viewIfLoaded?.window != nil {
-            paperController.becomeFirstResponder()
-        }
+        lastAppliedPaletteState = state
+        paperController.becomeFirstResponder()
     }
 
     func undoMarkup() {
