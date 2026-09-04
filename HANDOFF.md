@@ -37,6 +37,9 @@ old version and tag values.
 - Latest installable package tag: `0.1.20`
 - Latest runtime implementation commit: `9dfe5e5` — isolated custom-toolbar
   bridge over the accepted PaperKit editor
+- Latest researched toolbar-design commit: `1a14d92` — StudyCoach-owned exact
+  native tools, direct Pencil interactions, structured insertion, and feature
+  capability boundaries
 - `0.1.19` annotated tag target commit: `8ebf8bc` — Apple validation record
 - `0.1.20` annotated tag target commit: `13c0c20` — version record and
   physical-test instructions
