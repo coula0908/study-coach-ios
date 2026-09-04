@@ -13,8 +13,11 @@ removes `PDFView`, doubles the logical page coordinates, displays a complete
 bounded PDF page image, and overlays a bounded cache of completed
 high-resolution PDF tiles. Pinch does not render transient scales; fixed-scale
 pan and inertia retain sharp tiles and request only missing neighboring
-coverage. It remains isolated until the physical iPad acceptance check passes;
-the existing production root stays recoverable and unchanged.
+coverage. Physical iPadOS 26 use found sharpening somewhat slower than
+Notability but usable, and the user accepted the renderer tradeoff. The path
+remains isolated only because the complete editor workflow has not yet been
+promoted and accepted; the existing production root stays recoverable and
+unchanged.
 
 The production viewer follows Apple's WWDC22 design: one `PDFView` owns PDF
 layout, scrolling, zoom, crop-box transforms, and rotation, while
@@ -154,7 +157,8 @@ established `CATiledLayer`/PDF-viewer pattern while avoiding the earlier visible
 blank-rectangle failure through the permanent fallback, no-fade publication,
 prefetching, and LRU-bounded reuse. See `HANDOFF.md` for sources, rationale, and
 the physical-device acceptance checklist. This direction is implemented in the
-isolated `0.1.19` diagnostic but remains physically unverified.
+isolated `0.1.19` diagnostic and its rendering performance is physically
+accepted with the documented slower-than-Notability tradeoff.
 
 ## Document identity and storage
 

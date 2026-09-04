@@ -46,8 +46,13 @@ remaining acceptance checks pass in Swift Playgrounds on the target iPad.
 - Xcode 26 iPad Simulator tests, including the new tile-planner coverage:
   passed
 - Apple validation record: `8ebf8bc`; annotated package tag `0.1.19` pushed
-- Physical Swift Playgrounds compilation: pending
-- Physical iPadOS 26 pan/zoom/ink acceptance: pending
+- Physical Swift Playgrounds launch and PDF rendering: passed; the user tested
+  `0.1.19` on iPadOS 26
+- Physical rendering acceptance: passed with accepted tradeoff; sharpening is
+  somewhat slower than Notability but not slow enough to prevent use, and the
+  user explicitly chose to move on from renderer work
+- Not established by this report: complete tool behavior, automatic-save data
+  safety, page/relaunch restoration, and promotion into `StudyCoachRootView()`
 
 ## Pan-end-only detail rendering: 0.1.18
 

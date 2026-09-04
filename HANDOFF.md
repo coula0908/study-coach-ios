@@ -46,28 +46,27 @@ old version and tag values.
   `origin/main`.
   GitHub Actions run `33859079628` passed the Xcode 16.4 fallback build,
   Xcode 26 normal build, strict Swift 6 build, and iPad Simulator tests.
-  Annotated tag `0.1.19` is pushed and physical iPadOS 26 interaction is still
-  pending.
+  Annotated tag `0.1.19` is pushed. On the physical iPadOS 26 device, the user
+  reports that PDF sharpening is somewhat slower than Notability but remains
+  usable and explicitly accepted moving past renderer work. This accepts the
+  renderer only, not the complete editor feature set.
 
 ## In Progress
 
-- Runtime implementation of the fixed-scale PDF tile/cache strategy has begun
-  with the user's explicit authorization.
-- Target source version: `0.1.19`.
-- Pinch behavior: keep the existing stable representation and submit no
-  transient zoom-level renders until the gesture ends.
-- Fixed-scale pan behavior: retain completed high-resolution tiles, request
-  only missing visible and neighboring tiles, and never clear the whole detail
-  surface merely because content offset changed.
-- The complete bounded page image remains underneath so a missing tile never
-  appears white or blank. Per-tile status-message flashing must be removed.
-- Current stage: the single visible-region bitmap has been replaced by a
-  bounded cached grid, with planner tests and documentation, in commit
-  `ad6c460`. Windows `scripts/validate-repository.ps1` and `git diff --check`
-  pass, and the commit is on `origin/main`. GitHub Actions run `33859079628`
-  passed both Apple jobs, including strict Swift 6 and iPad Simulator tests.
-  Validation commit `8ebf8bc` and annotated tag `0.1.19` are on the remote.
-  The next required result is physical iPadOS 26 acceptance.
+- Renderer work is frozen at `0.1.19`: do not resume zoom/pan rendering
+  optimization unless a new correctness, crash, or clearly unusable problem is
+  reported. The accepted tradeoff is that sharpening is slower than Notability
+  but usable.
+- The working PaperKit PDF path is still an isolated diagnostic entry point,
+  while `StudyCoachRootView()` still opens the older PDFKit/PencilKit editor.
+  The next architectural task is to productize the accepted PaperKit path and
+  make it the real app flow without reviving the rejected dual-viewport design.
+- Before promotion, close the data-safety and core-tool gaps: dependable
+  automatic PaperMarkup saving, verified page/relaunch restoration, thin-tool
+  availability, eraser modes, Pencil double-tap, line hold, and a representative
+  large-document/page-navigation check on the physical device.
+- AI coaching, document-library polish, search/thumbnails, and annotated-PDF
+  export remain after the dependable PDF-and-Pencil study loop.
 
 ## Confirmed physical-device history
 
@@ -91,7 +90,7 @@ old version and tag values.
   user correctly identified that a sufficiently zoomed base image can be
   blurry and uncomfortable to read while moving.
 
-## Current design decision — implemented, awaiting device validation
+## Current design decision — renderer accepted, editor promotion pending
 
 Zoom and pan require separate rendering policies:
 
@@ -130,8 +129,9 @@ The `0.1.19` implementation candidate is therefore:
 - Remove per-tile "rendering/completed" status text from the normal reading UI;
   retain diagnostics in logs or an opt-in debug display.
 
-The user explicitly authorized implementation after the design discussion.
-Keep this path isolated until its physical iPad behavior is accepted.
+The user explicitly accepted the `0.1.19` renderer tradeoff after physical use.
+Keep its rendering policy stable while the remaining editor behavior is
+verified and the PaperKit path is promoted into the actual app flow.
 
 ## External evidence to consult first
 
@@ -160,7 +160,7 @@ blank tiles, stable text during pan, sharp resting content, and immediate Pencil
 input—but their private rendering architecture must not be asserted without a
 public technical source.
 
-## Required acceptance checks for the next renderer
+## Remaining physical acceptance checks for the editor
 
 On the physical iPadOS 26 device, separately test:
 
