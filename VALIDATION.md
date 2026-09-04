@@ -36,8 +36,13 @@ remaining acceptance checks pass in Swift Playgrounds on the target iPad.
   recognizers in PaperKit's view hierarchy through target-action
 - Permanent viewport sampler: removed
 - Fixed post-gesture delay: none
-- Windows repository validation: pending
-- Apple toolchain build and simulator tests: pending
+- Windows repository validation: passed (`scripts/validate-repository.ps1` and
+  `git diff --check`)
+- Apple validation commit: `5816568616c681b41aea2961240d9ed57fd8a49d`
+- Workflow run: <https://github.com/coula0908/study-coach-ios/actions/runs/33855925361>
+- Xcode 16.4 fallback build and iPad Simulator tests: passed
+- Xcode 26 normal build, strict Swift 6 concurrency build, and iPad Simulator
+  tests: passed
 - Physical iPadOS 26 acceptance: pending
 
 ## Pinch-end-only detail rendering: 0.1.17
