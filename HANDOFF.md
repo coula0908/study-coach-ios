@@ -35,8 +35,8 @@ old version and tag values.
 - Active local branch: `codex/paperkit-adaptive-background`
 - Remote development branch: `main`
 - Latest device-test tag: `0.1.18`
-- Latest runtime implementation commit: `5816568` — render PDF detail after
-  navigation settles
+- Latest runtime implementation commit: `ad6c460` — keep sharp PDF tiles
+  during fixed-scale pan
 - `0.1.18` annotated tag target commit: `be7c890` — Apple validation record
 - Package/module: `StudyCoachCore`
 - Production entry point: `StudyCoachRootView()`
@@ -45,6 +45,10 @@ old version and tag values.
 - `0.1.18` passed the Windows repository checks, Xcode 16.4 fallback build,
   Xcode 26 build, strict Swift 6 build, and iPad Simulator tests. Its physical
   iPadOS 26 interaction result is still pending.
+- Source version `0.1.19` is committed as `ad6c460` and pushed to `origin/main`.
+  GitHub Actions run `33859079628` passed the Xcode 16.4 fallback build,
+  Xcode 26 normal build, strict Swift 6 build, and iPad Simulator tests.
+  Physical iPadOS 26 interaction is still pending; no `0.1.19` tag exists yet.
 
 ## In Progress
 
@@ -58,10 +62,12 @@ old version and tag values.
   surface merely because content offset changed.
 - The complete bounded page image remains underneath so a missing tile never
   appears white or blank. Per-tile status-message flashing must be removed.
-- Current stage: the single visible-region bitmap has been replaced locally by
-  a bounded cached grid, with planner tests and documentation. Windows
-  `scripts/validate-repository.ps1` and `git diff --check` pass. Apple builds
-  have not yet run. No `0.1.19` commit, push, or tag exists yet.
+- Current stage: the single visible-region bitmap has been replaced by a
+  bounded cached grid, with planner tests and documentation, in commit
+  `ad6c460`. Windows `scripts/validate-repository.ps1` and `git diff --check`
+  pass, and the commit is on `origin/main`. GitHub Actions run `33859079628`
+  passed both Apple jobs, including strict Swift 6 and iPad Simulator tests.
+  The validation record is being finalized before creating the `0.1.19` tag.
 
 ## Confirmed physical-device history
 
@@ -85,7 +91,7 @@ old version and tag values.
   user correctly identified that a sufficiently zoomed base image can be
   blurry and uncomfortable to read while moving.
 
-## Current design decision — not yet implemented
+## Current design decision — implemented, awaiting Apple and device validation
 
 Zoom and pan require separate rendering policies:
 

@@ -37,7 +37,14 @@ remaining acceptance checks pass in Swift Playgrounds on the target iPad.
   Nutrient's published multi-resolution/tile-cache renderer architecture
 - Windows repository validation: passed (`scripts/validate-repository.ps1` and
   `git diff --check`)
-- Apple toolchain build and simulator tests: pending
+- Runtime implementation commit:
+  `ad6c460292325bccb8594624fbfef58d9e998d7d`
+- Workflow run:
+  <https://github.com/coula0908/study-coach-ios/actions/runs/33859079628>
+- Xcode 16.4 fallback build: passed
+- Xcode 26 normal build and strict Swift 6 concurrency build: passed
+- Xcode 26 iPad Simulator tests, including the new tile-planner coverage:
+  passed
 - Physical Swift Playgrounds compilation: pending
 - Physical iPadOS 26 pan/zoom/ink acceptance: pending
 
