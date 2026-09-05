@@ -1,5 +1,29 @@
 # Validation log
 
+## 0.1.26 workflow and ink regression candidate
+
+- User's 0.1.25 physical report: dotted preview disappears on Pencil lift;
+  0/90-degree marker becomes faint; stroke eraser has no contact range circle.
+- Implemented automatic observed saves, ordered atomic writes, save-before-page
+  switch, background save opportunity, and whole-document annotated PDF export.
+- Top row now has left tabs and right page/undo/redo/export/More actions.
+- More switches vertical/horizontal paginated edge scrolling. This does not
+  yet implement a continuous multi-page document strip.
+- Dotted creation now uses substantial masked spline segments and actual UIView
+  content-coordinate conversion. A single PencilKit drawing construction feeds
+  both preview and commit. All marker angles use rounded pen footprints with
+  one ink-alpha factor and a fixed ellipse transform; 45-degree native input
+  consequently changes too and must be compared on the physical iPad.
+- Regression tests exercise actual black ink surviving PaperMarkup serialization,
+  marker density and angle extents, ordered snapshot saves, and exported page
+  count plus original blue content and black annotations.
+- Windows repository validation and whitespace checks pass. Final runtime
+  commit `2b08ee5` passed GitHub Actions run `33949232646`: Xcode 16 fallback,
+  Xcode 26 normal and strict Swift 6 compilation, and both iPad Simulator jobs.
+  https://github.com/coula0908/study-coach-ios/actions/runs/33949232646
+  Physical Swift Playgrounds acceptance remains pending.
+- References and known limits: `docs/EDITOR_0_1_26.md`.
+
 ## Current status
 
 - Repository structure: passed `scripts/validate-repository.ps1` on 2026-09-05

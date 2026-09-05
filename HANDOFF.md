@@ -35,9 +35,9 @@ old version and tag values.
 - Active local branch: `codex/paperkit-adaptive-background`
 - Remote development branch: `main`
 - Latest installable package tag: `0.1.25`
-- Latest runtime implementation commit: `b603868` — floating toolbar,
-  Pencil-only dotted/fixed-angle paths, light-stable colors, corrected eraser
-  widths/cursor, and newest-first PhotoKit tray
+- Latest runtime implementation commit: `2b08ee5` — ordered automatic saves,
+  annotated PDF export, top actions, directional page-edge navigation,
+  persistent dotted ink, rounded marker at all angles, and contact eraser cursor.
 - Latest researched toolbar-design commit: `1a14d92` — StudyCoach-owned exact
   native tools, direct Pencil interactions, structured insertion, and feature
   capability boundaries
@@ -59,13 +59,27 @@ old version and tag values.
 - Production entry point: `StudyCoachRootView()`
 - Current isolated candidate entry point:
   `StudyCoachPaperKitPDFDiagnosticView()` on iPadOS 26 or later
-- Source version `0.1.25` keeps the accepted PaperKit editor and `0.1.19`
-  renderer. GitHub Actions run `33947081676` passes Xcode 16 fallback, Xcode 26
-  normal and strict Swift 6 builds, and both iPad Simulator jobs. Annotated tag
-  `0.1.25` points to `f52bc26`; physical iPadOS 26 testing is pending.
+- Source version `0.1.26` uses the accepted `0.1.19` PDF renderer. Final runtime
+  `2b08ee5` passed GitHub Actions run `33949232646` (Xcode 16 fallback, Xcode 26
+  normal/strict Swift 6, both iPad Simulator jobs). Prepare annotated 0.1.26
+  candidate tag; physical iPad testing is pending. 0.1.25 had reported failures.
 
 ## In Progress
 
+- Current implementation `2b08ee5` addresses 0.1.25 physical failures and the
+  newly requested workflow. See `docs/EDITOR_0_1_26.md` for exact boundaries.
+  Automatic Observation-based atomic writes serialize per destination;
+  navigation waits for writes; export draws source PDF plus saved PaperMarkup
+  into a new shareable PDF. Top row has left tabs/right actions. More selects
+  vertical/horizontal page-edge swipes (not a continuous multi-page strip).
+  Dots use four-point masked splines. All three highlighter angles now use
+  rounded affine-transformed pen ink with alpha once and the same PKDrawing
+  for preview/commit. 45-degree input therefore also changed and needs physical
+  comparison. Whole-stroke eraser has passive contact as well as hover feedback.
+  Initial Apple CI runs passed, including pixel survival and serialized density
+  tests. Final head CI `33949232646` passes; physical iPad acceptance is pending.
+- This current entry supersedes the older 0.1.25 implementation descriptions
+  below: retaining native 45-degree marker no longer describes current code.
 - New user-authorized 0.1.26 work: automatic ordered saving + annotated PDF
   export; left tabs/right document actions on one top row; vertical/horizontal
   page-edge scrolling through More; dotted release disappearance; consistent

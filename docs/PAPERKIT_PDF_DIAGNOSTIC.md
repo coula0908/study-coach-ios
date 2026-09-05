@@ -44,6 +44,12 @@ available below it.
 
 ## Physical iPadOS 26 checklist
 
+For the newest 0.1.26 candidate, saving is automatic. The top-right share icon
+exports a new PDF including saved ink; manual Save is no longer needed.
+Use More (…) to select vertical or horizontal page navigation. Swipe outward
+from the page edge to turn a page; interior drags still move a zoomed page.
+Detailed current behavior: [0.1.26 notes](EDITOR_0_1_26.md).
+
 1. The diagnostic compiles and opens in Swift Playgrounds.
 2. A selected PDF page is upright, uncropped, and not mirrored.
 3. Pen and highlighter draw over the intended PDF location.

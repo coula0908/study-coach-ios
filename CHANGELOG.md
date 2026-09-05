@@ -1,5 +1,27 @@
 # Changelog
 
+## 0.1.26 — Automatic saves, export, page navigation, and persistent ink
+
+- Automatically observe PaperKit markup changes and enqueue ordered atomic
+  saves; await saves before page/document switches and before exporting.
+- Replace the Save button with annotated PDF export and a system share sheet.
+  Draw each original page plus saved PaperMarkup into a separate PDF file.
+- Align document tabs left and page/undo/redo/export/More actions right on one
+  top row; keep the drawing tool rows floating over the PDF.
+- Add persisted vertical/horizontal page-edge navigation in More. An outward
+  one-finger swipe from a page boundary turns a page on release; zoomed interior
+  drags remain pans. Continuous multi-page layout is not implemented here.
+- Replace disappearing near-zero-length dotted paths with four-point splines
+  and circular masks; preview and committed ink use the same drawing model.
+- Use actual UIView content transforms for custom ink coordinates.
+- Apply marker transparency once and round both ends at all three angles using
+  a transformed round PencilKit pen footprint. This also changes the former
+  native 45-degree marker input; physical feel comparison is required.
+- Show the whole-stroke eraser cursor during Pencil contact using a passive
+  observer, including devices without Hover support.
+- Add rendering/serialization regression tests for dot survival, marker
+  opacity and angles, ordered saves, and original-plus-ink PDF export.
+
 ## 0.1.25 — Floating palette, patterned ink, and recent photos
 
 - Place the document tabs and both tool rows in a true overlay above the PDF;
