@@ -42,12 +42,14 @@ final class PaperKitInkRegressionTests: XCTestCase {
 
     func testRoundedHighlighterUsesOneOpacityFactorAtBothAngles() throws {
         let controller = try editor()
+        var heights: [CGFloat] = []
         for angle in [CGFloat(0), .pi / 2] {
             let stroke = controller.makeFixedHighlighterStroke(
                 samples: samples, color: .yellow, width: 8, opacity: 0.35, azimuth: angle)
             XCTAssertEqual(stroke.ink.color.cgColor.alpha, 0.35, accuracy: 0.01)
             XCTAssertEqual(stroke.path.first?.opacity, 2)
             let drawing = PKDrawing(strokes: [stroke])
+            heights.append(drawing.bounds.height)
             let copy = try PKDrawing(data: drawing.dataRepresentation())
             let bounds = CGRect(x: 0, y: 0, width: 200, height: 100)
             let before = try alphaSum(drawing.image(from: bounds, scale: 1))
@@ -55,6 +57,7 @@ final class PaperKitInkRegressionTests: XCTestCase {
             XCTAssertGreaterThan(after, 3000)
             XCTAssertEqual(Double(before), Double(after), accuracy: max(100, Double(before) * 0.02))
         }
+        XCTAssertGreaterThan(heights[1], heights[0] * 2)
     }
 
     private func render(_ markup: PaperMarkup) async throws -> UIImage {

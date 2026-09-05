@@ -2073,14 +2073,21 @@ final class PaperKitPDFPageViewController: UIViewController {
         azimuth: CGFloat
     ) -> PKStroke {
         let startTime = samples.first?.timestamp ?? 0
+        // Affine-transform a round nib into a fixed ellipse. Inverse-transform
+        // the centreline first so the user's page path stays exactly in place.
+        // This does not depend on whether a specific ink honors tip azimuth.
+        let nibTransform = CGAffineTransform(
+            a: cos(azimuth) * 2.8, b: sin(azimuth) * 2.8,
+            c: -sin(azimuth) * 0.62, d: cos(azimuth) * 0.62, tx: 0, ty: 0
+        )
         var points = samples.map { sample in
             PKStrokePoint(
-                location: sample.location,
+                location: sample.location.applying(nibTransform.inverted()),
                 timeOffset: max(0, sample.timestamp - startTime),
-                size: CGSize(width: width * 2.8, height: max(width * 0.62, 1)),
+                size: CGSize(width: width, height: width),
                 opacity: 2,
                 force: 1,
-                azimuth: azimuth,
+                azimuth: 0,
                 altitude: .pi / 2
             )
         }
@@ -2105,7 +2112,8 @@ final class PaperKitPDFPageViewController: UIViewController {
             points.append(last)
         }
         let path = PKStrokePath(controlPoints: points, creationDate: Date())
-        return PKStroke(ink: PKInk(.pen, color: color.withAlphaComponent(opacity)), path: path)
+        return PKStroke(ink: PKInk(.pen, color: color.withAlphaComponent(opacity)),
+                        path: path, transform: nibTransform)
     }
 
     private func evenlySpacedLocations(
