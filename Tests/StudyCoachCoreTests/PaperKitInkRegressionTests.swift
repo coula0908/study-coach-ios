@@ -98,6 +98,28 @@ final class PaperKitInkRegressionTests: XCTestCase {
         let page = try XCTUnwrap(exported.page(at: 0))
         let image = page.thumbnail(of: CGSize(width: 200, height: 200), for: .mediaBox)
         XCTAssertNotNil(image.cgImage)
+        let counts = try exportedPixelCounts(image)
+        XCTAssertGreaterThan(counts.ink, 15, "Export must include saved black ink")
+        XCTAssertGreaterThan(counts.blue, 50, "Markup must not cover the source PDF")
+    }
+
+    private func exportedPixelCounts(_ image: UIImage) throws -> (ink: Int, blue: Int) {
+        let image = try XCTUnwrap(image.cgImage)
+        let context = try XCTUnwrap(CGContext(data: nil, width: image.width, height: image.height,
+            bitsPerComponent: 8, bytesPerRow: image.width * 4,
+            space: CGColorSpaceCreateDeviceRGB(),
+            bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue))
+        context.draw(image, in: CGRect(x: 0, y: 0, width: image.width, height: image.height))
+        let bytes = try XCTUnwrap(context.data).assumingMemoryBound(to: UInt8.self)
+        var ink = 0
+        var blue = 0
+        for offset in stride(from: 0, to: image.width * image.height * 4, by: 4) {
+            if bytes[offset + 3] > 200 {
+                if bytes[offset] < 60, bytes[offset + 1] < 60, bytes[offset + 2] < 60 { ink += 1 }
+                if bytes[offset] < 60, bytes[offset + 1] < 60, bytes[offset + 2] > 160 { blue += 1 }
+            }
+        }
+        return (ink, blue)
     }
 
     private func alphaSum(_ image: UIImage) throws -> Int {

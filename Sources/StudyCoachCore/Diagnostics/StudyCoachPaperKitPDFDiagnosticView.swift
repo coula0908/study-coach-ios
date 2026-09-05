@@ -453,8 +453,8 @@ private struct PaperKitPDFDiagnosticWorkspace: View {
         ) { result in
             switch result {
             case .success(let urls):
-                for url in urls {
-                    model.importPDF(from: url)
+                afterSaving {
+                    for url in urls { model.importPDF(from: url) }
                 }
             case .failure(let error):
                 let cocoaError = error as NSError
