@@ -67,6 +67,33 @@ old version and tag values.
 
 ## In Progress
 
+- Physical `0.1.24` testing found that its toolbar still participates in the
+  vertical layout (the PDF jumps when the context row opens), dark-mode ink
+  adaptation makes edited colors appear inverted, native marker azimuth still
+  does not behave as a fixed tip angle, `.bitmap` eraser width is not visibly
+  adjustable, and `.vector` still has no useful range cursor. The user also
+  requested a dotted pen and a Goodnotes-style recent-photo tray.
+- `0.1.25` is now an isolated editor-control correction. Move the complete
+  palette into a fixed overlay above the PDF so row changes never relayout the
+  page; constrain and center both scrollable rows; force light-style ink color
+  interpretation over the fixed white PDF; label eraser modes; use predictable
+  fixed-width pixel erasing for the adjustable partial/precision modes; and
+  add an official PhotoKit recent-assets strip with a Files action below it.
+  Swift Playgrounds requires the consumer app's **Photo Library** capability
+  before direct recent-photo access; code must detect a missing purpose string
+  before requesting access so the preview cannot crash.
+- Apple's public `PKInkingTool.azimuth` is only a base angle and the final mark
+  also uses live Pencil force/azimuth/angle. Therefore repeatedly assigning a
+  native marker cannot provide the fixed highlighter angle the user expects.
+  The same custom, Pencil-only capture boundary needed for dotted ink will be
+  evaluated for fixed-angle output. PaperKit remains the viewport owner and
+  solid pen/marker input remains native; no external package is approved.
+- `PaperMarkup.subelements` is iPadOS 27-only, so an iPadOS 26 implementation
+  cannot post-process the last native PaperKit stroke in place. The supported
+  iPadOS 26 path is to construct a `PKDrawing` from public `PKStrokePoint`,
+  `PKStrokePath`, and `PKStroke` values and append it to `PaperMarkup` after an
+  isolated Pencil-only patterned stroke. Record this as an experimental tool
+  until physical latency, coordinates, undo, erase, and persistence pass.
 - `0.1.23` physical use confirmed that the compact controls still consume
   space inefficiently and exposed three concrete defects: the ten separate
   width targets are hard to tap, the marker's visible tip angle remains 45

@@ -17,7 +17,9 @@ final class StudyCoachCoreSmokeTests: XCTestCase {
         XCTAssertEqual(state.penWidthLevel, 2)
         XCTAssertEqual(state.penWidth, 2.2)
         XCTAssertEqual(state.penColor, .black)
+        XCTAssertEqual(state.penPattern, .solid)
         XCTAssertEqual(state.highlighterOpacity, 0.35)
+        XCTAssertEqual(state.highlighterAzimuth, .pi / 4)
         XCTAssertTrue(state.isContextPanelExpanded)
     }
 
@@ -63,6 +65,18 @@ final class StudyCoachCoreSmokeTests: XCTestCase {
         XCTAssertEqual(state.highlighterOpacity, 0.42)
     }
 
+    func testPenPatternCanSwitchWithoutChangingPenSettings() {
+        var state = StudyCoachToolPaletteState()
+        let width = state.penWidth
+        let color = state.penColor
+
+        state.setPenPattern(.dotted)
+
+        XCTAssertEqual(state.penPattern, .dotted)
+        XCTAssertEqual(state.penWidth, width)
+        XCTAssertEqual(state.penColor, color)
+    }
+
     func testOlderPaletteJSONRestoresWithDefaultHighlighterOpacity() throws {
         let oldJSON = """
         {
@@ -89,6 +103,7 @@ final class StudyCoachCoreSmokeTests: XCTestCase {
 
         XCTAssertEqual(restored.penWidthLevel, 4)
         XCTAssertEqual(restored.highlighterOpacity, 0.35)
+        XCTAssertEqual(restored.penPattern, .solid)
     }
 
     func testPencilEraserToggleReturnsToLastInkingTool() {
@@ -176,6 +191,33 @@ final class StudyCoachCoreSmokeTests: XCTestCase {
         controller.drawingTool = PKEraserTool(.bitmap, width: 12)
         controller.drawingTool = PKEraserTool(.vector, width: 12)
         controller.drawingTool = PKLassoTool()
+
+        let strokePoints = [
+            PKStrokePoint(
+                location: CGPoint(x: 10, y: 10),
+                timeOffset: 0,
+                size: CGSize(width: 2, height: 2),
+                opacity: 1,
+                force: 1,
+                azimuth: 0,
+                altitude: .pi / 2
+            ),
+            PKStrokePoint(
+                location: CGPoint(x: 10.02, y: 10),
+                timeOffset: 0.001,
+                size: CGSize(width: 2, height: 2),
+                opacity: 1,
+                force: 1,
+                azimuth: 0,
+                altitude: .pi / 2
+            ),
+        ]
+        let strokePath = PKStrokePath(controlPoints: strokePoints, creationDate: Date())
+        let stroke = PKStroke(ink: PKInk(.pen, color: .black), path: strokePath)
+        var appendedMarkup = markup
+        appendedMarkup.append(contentsOf: PKDrawing(strokes: [stroke]))
+        controller.markup = appendedMarkup
+        XCTAssertNotNil(controller.markup)
     }
 
     @available(iOS 26.0, *)

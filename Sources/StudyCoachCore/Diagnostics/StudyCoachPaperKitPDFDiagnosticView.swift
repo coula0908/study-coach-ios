@@ -5,6 +5,7 @@ import CryptoKit
 import PDFKit
 import PaperKit
 import PencilKit
+@preconcurrency import Photos
 import PhotosUI
 import UIKit
 import UniformTypeIdentifiers
@@ -264,9 +265,142 @@ private enum PaperKitPDFDiagnosticStorage {
 }
 
 @available(iOS 26.0, *)
+private struct PaperKitRecentPhotoItem: Identifiable {
+    let id: String
+    var thumbnail: UIImage?
+}
+
+@available(iOS 26.0, *)
+@MainActor
+private final class PaperKitRecentPhotoLibrary: ObservableObject {
+    enum AccessState: Equatable {
+        case idle
+        case loading
+        case ready
+        case capabilityMissing
+        case denied
+    }
+
+    @Published private(set) var items: [PaperKitRecentPhotoItem] = []
+    @Published private(set) var accessState: AccessState = .idle
+    private let imageManager = PHCachingImageManager()
+
+    func load() {
+        guard Bundle.main.object(
+            forInfoDictionaryKey: "NSPhotoLibraryUsageDescription"
+        ) != nil else {
+            accessState = .capabilityMissing
+            items = []
+            return
+        }
+
+        let status = PHPhotoLibrary.authorizationStatus(for: .readWrite)
+        if status == .notDetermined {
+            accessState = .loading
+            PHPhotoLibrary.requestAuthorization(for: .readWrite) { [weak self] status in
+                Task { @MainActor in
+                    self?.reload(for: status)
+                }
+            }
+        } else {
+            reload(for: status)
+        }
+    }
+
+    func loadOriginalData(
+        for identifier: String,
+        completion: @escaping @MainActor (Result<Data, Error>) -> Void
+    ) {
+        let result = PHAsset.fetchAssets(
+            withLocalIdentifiers: [identifier],
+            options: nil
+        )
+        guard let asset = result.firstObject else {
+            completion(.failure(PaperKitRecentPhotoError.assetUnavailable))
+            return
+        }
+
+        let options = PHImageRequestOptions()
+        options.isNetworkAccessAllowed = true
+        options.deliveryMode = .highQualityFormat
+        options.version = .current
+        imageManager.requestImageDataAndOrientation(
+            for: asset,
+            options: options
+        ) { data, _, _, info in
+            let error = info?[PHImageErrorKey] as? Error
+            Task { @MainActor in
+                if let data {
+                    completion(.success(data))
+                } else {
+                    completion(.failure(error ?? PaperKitRecentPhotoError.assetUnavailable))
+                }
+            }
+        }
+    }
+
+    private func reload(for status: PHAuthorizationStatus) {
+        guard status == .authorized || status == .limited else {
+            accessState = .denied
+            items = []
+            return
+        }
+
+        accessState = .loading
+        let options = PHFetchOptions()
+        options.fetchLimit = 18
+        options.sortDescriptors = [
+            NSSortDescriptor(key: "creationDate", ascending: false),
+        ]
+        let result = PHAsset.fetchAssets(with: .image, options: options)
+        var nextItems: [PaperKitRecentPhotoItem] = []
+        result.enumerateObjects { asset, _, _ in
+            nextItems.append(
+                PaperKitRecentPhotoItem(
+                    id: asset.localIdentifier,
+                    thumbnail: nil
+                )
+            )
+        }
+        items = nextItems
+        accessState = .ready
+
+        let pixelSize = CGSize(width: 120, height: 120)
+        for asset in result.objects(at: IndexSet(integersIn: 0..<result.count)) {
+            imageManager.requestImage(
+                for: asset,
+                targetSize: pixelSize,
+                contentMode: .aspectFill,
+                options: nil
+            ) { [weak self] image, _ in
+                guard let image else { return }
+                Task { @MainActor in
+                    self?.setThumbnail(image, for: asset.localIdentifier)
+                }
+            }
+        }
+    }
+
+    private func setThumbnail(_ image: UIImage, for identifier: String) {
+        guard let index = items.firstIndex(where: { $0.id == identifier }) else { return }
+        items[index].thumbnail = image
+    }
+}
+
+@available(iOS 26.0, *)
+private enum PaperKitRecentPhotoError: LocalizedError {
+    case assetUnavailable
+
+    var errorDescription: String? {
+        "사진 원본을 불러오지 못했습니다."
+    }
+}
+
+@available(iOS 26.0, *)
 private struct PaperKitPDFDiagnosticWorkspace: View {
     @StateObject private var model = PaperKitPDFDiagnosticModel()
     @StateObject private var proxy = PaperKitPDFDiagnosticProxy()
+    @StateObject private var recentPhotos = PaperKitRecentPhotoLibrary()
     @State private var isShowingPDFImporter = false
     @State private var isShowingImageImporter = false
     @State private var isShowingPhotoPicker = false
@@ -275,10 +409,7 @@ private struct PaperKitPDFDiagnosticWorkspace: View {
     @State private var draftText = ""
 
     var body: some View {
-        VStack(spacing: 0) {
-            toolbar
-            Divider()
-
+        ZStack(alignment: .top) {
             if let page = model.currentPage {
                 ZStack(alignment: .bottomTrailing) {
                     PaperKitPDFPageContainer(
@@ -304,6 +435,8 @@ private struct PaperKitPDFDiagnosticWorkspace: View {
                     .buttonStyle(.borderedProminent)
                 }
             }
+
+            toolbar
         }
         .fileImporter(
             isPresented: $isShowingPDFImporter,
@@ -396,9 +529,9 @@ private struct PaperKitPDFDiagnosticWorkspace: View {
                     .background(.regularMaterial, in: Capsule())
             }
         }
-        .frame(maxWidth: .infinity)
+        .frame(maxWidth: .infinity, alignment: .top)
         .padding(.horizontal, 12)
-        .padding(.vertical, 6)
+        .padding(.top, 6)
         .animation(.snappy(duration: 0.2), value: proxy.paletteState.selectedTool)
         .animation(.snappy(duration: 0.2), value: proxy.paletteState.isContextPanelExpanded)
     }
@@ -425,7 +558,13 @@ private struct PaperKitPDFDiagnosticWorkspace: View {
             }
             .contentMargins(.horizontal, 2, for: .scrollContent)
         }
-        .frame(maxWidth: .infinity, minHeight: 38, maxHeight: 38)
+        .frame(maxWidth: 760, minHeight: 38, maxHeight: 38)
+        .padding(.horizontal, 7)
+        .background(.ultraThinMaterial, in: RoundedRectangle(cornerRadius: 11))
+        .overlay {
+            RoundedRectangle(cornerRadius: 11)
+                .stroke(Color.primary.opacity(0.08), lineWidth: 1)
+        }
     }
 
     private func documentTab(_ tab: PaperKitPDFDocumentTab) -> some View {
@@ -459,29 +598,51 @@ private struct PaperKitPDFDiagnosticWorkspace: View {
     }
 
     private var primaryToolBar: some View {
-        HStack(spacing: 5) {
-            ForEach(StudyCoachPaletteTool.allCases) { tool in
-                toolButton(tool)
+        ScrollView(.horizontal, showsIndicators: false) {
+            HStack(spacing: 5) {
+                Spacer(minLength: 0)
+                ForEach(StudyCoachPaletteTool.allCases) { tool in
+                    toolButton(tool)
+                }
+                Spacer(minLength: 0)
             }
+            .frame(minWidth: 500)
         }
-        .padding(.horizontal, 7)
+        .contentMargins(.horizontal, 7, for: .scrollContent)
+        .frame(width: 520)
         .frame(minHeight: 48, maxHeight: 48)
-        .background(.regularMaterial, in: Capsule())
+        .background(
+            .regularMaterial,
+            in: RoundedRectangle(cornerRadius: 22, style: .continuous)
+        )
         .overlay {
-            Capsule().stroke(Color.primary.opacity(0.08), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(Color.primary.opacity(0.08), lineWidth: 1)
         }
     }
 
     private var secondaryToolBar: some View {
         ScrollView(.horizontal, showsIndicators: false) {
-            activeToolControls
-                .padding(.horizontal, 8)
+            HStack(spacing: 0) {
+                Spacer(minLength: 0)
+                activeToolControls
+                Spacer(minLength: 0)
+            }
+            .frame(minWidth: 488)
         }
-        .contentMargins(.horizontal, 4, for: .scrollContent)
-        .frame(maxWidth: 920, minHeight: 46, maxHeight: 46)
-        .background(.regularMaterial, in: Capsule())
+        .contentMargins(.horizontal, 6, for: .scrollContent)
+        .frame(
+            width: 500,
+            minHeight: proxy.paletteState.selectedTool == .image ? 116 : 46,
+            maxHeight: proxy.paletteState.selectedTool == .image ? 116 : 46
+        )
+        .background(
+            .regularMaterial,
+            in: RoundedRectangle(cornerRadius: 22, style: .continuous)
+        )
         .overlay {
-            Capsule().stroke(Color.primary.opacity(0.08), lineWidth: 1)
+            RoundedRectangle(cornerRadius: 22, style: .continuous)
+                .stroke(Color.primary.opacity(0.08), lineWidth: 1)
         }
     }
 
@@ -529,6 +690,9 @@ private struct PaperKitPDFDiagnosticWorkspace: View {
                         selectColor: proxy.selectPenColor,
                         replaceColor: proxy.replaceSelectedPenColor
                     )
+                    toolDivider
+                    penPatternButton(.solid)
+                    penPatternButton(.dotted)
                 }
             )
         case .highlighter:
@@ -574,6 +738,7 @@ private struct PaperKitPDFDiagnosticWorkspace: View {
         case .eraser:
             AnyView(
                 HStack(spacing: 4) {
+                    eraserSizePreview
                     widthSlider(
                         widths: StudyCoachToolPaletteState.eraserWidths,
                         selectedLevel: proxy.paletteState.eraserWidthLevel,
@@ -588,11 +753,7 @@ private struct PaperKitPDFDiagnosticWorkspace: View {
                             .precision,
                         ]
                     ) { mode in
-                        compactChoiceIconButton(
-                            mode.systemImage,
-                            label: mode.title,
-                            isSelected: proxy.paletteState.eraserMode == mode
-                        ) { proxy.setEraserMode(mode) }
+                        eraserModeButton(mode)
                     }
                 }
             )
@@ -610,20 +771,7 @@ private struct PaperKitPDFDiagnosticWorkspace: View {
                 }
             )
         case .image:
-            AnyView(
-                HStack(spacing: 4) {
-                    compactChoiceIconButton(
-                        "photo",
-                        label: "사진에서 이미지 추가",
-                        isSelected: true
-                    ) { isShowingPhotoPicker = true }
-                    compactChoiceIconButton(
-                        "folder",
-                        label: "파일에서 이미지 추가",
-                        isSelected: false
-                    ) { isShowingImageImporter = true }
-                }
-            )
+            AnyView(recentPhotoControls)
         }
     }
 
@@ -634,8 +782,137 @@ private struct PaperKitPDFDiagnosticWorkspace: View {
             tool.systemImage,
             label: tool.title,
             isSelected: isSelected
-        ) { proxy.selectTool(tool) }
+        ) {
+            if tool == .image {
+                recentPhotos.load()
+            }
+            proxy.selectTool(tool)
+        }
         .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private var recentPhotoControls: some View {
+        VStack(spacing: 5) {
+            Group {
+                if recentPhotos.items.isEmpty {
+                    Button {
+                        isShowingPhotoPicker = true
+                    } label: {
+                        Label(recentPhotoStatusTitle, systemImage: "photo.on.rectangle")
+                            .font(.caption.weight(.semibold))
+                            .frame(maxWidth: .infinity, minHeight: 56)
+                    }
+                    .buttonStyle(.plain)
+                } else {
+                    ScrollView(.horizontal, showsIndicators: false) {
+                        HStack(spacing: 7) {
+                            ForEach(recentPhotos.items) { item in
+                                Button {
+                                    insertRecentPhoto(item.id)
+                                } label: {
+                                    Group {
+                                        if let thumbnail = item.thumbnail {
+                                            Image(uiImage: thumbnail)
+                                                .resizable()
+                                                .scaledToFill()
+                                        } else {
+                                            ProgressView()
+                                        }
+                                    }
+                                    .frame(width: 54, height: 54)
+                                    .background(Color.secondary.opacity(0.1))
+                                    .clipShape(RoundedRectangle(cornerRadius: 8))
+                                }
+                                .buttonStyle(.plain)
+                                .accessibilityLabel("최근 사진 삽입")
+                            }
+                        }
+                    }
+                }
+            }
+            .frame(width: 472, height: 58)
+
+            Button {
+                isShowingImageImporter = true
+            } label: {
+                Label("파일에서 불러오기", systemImage: "folder")
+                    .font(.caption.weight(.semibold))
+                    .frame(maxWidth: .infinity, minHeight: 32)
+            }
+            .buttonStyle(.plain)
+        }
+    }
+
+    private var recentPhotoStatusTitle: String {
+        switch recentPhotos.accessState {
+        case .idle, .loading:
+            "최근 사진 불러오는 중"
+        case .ready:
+            "사진 선택"
+        case .capabilityMissing:
+            "사진 보관함 권한 설정 필요"
+        case .denied:
+            "사진 접근이 허용되지 않음"
+        }
+    }
+
+    private func insertRecentPhoto(_ identifier: String) {
+        recentPhotos.loadOriginalData(for: identifier) { result in
+            switch result {
+            case .success(let data):
+                proxy.insertImage(data: data)
+            case .failure(let error):
+                proxy.reportError(error.localizedDescription)
+            }
+        }
+    }
+
+    private func penPatternButton(_ pattern: StudyCoachPenPattern) -> some View {
+        let isSelected = proxy.paletteState.penPattern == pattern
+        let image = pattern == .solid ? "line.diagonal" : "ellipsis"
+        let label = pattern == .solid ? "실선" : "점선"
+        return compactChoiceIconButton(
+            image,
+            label: label,
+            isSelected: isSelected
+        ) { proxy.setPenPattern(pattern) }
+    }
+
+    private func eraserModeButton(_ mode: StudyCoachPaletteEraserMode) -> some View {
+        let isSelected = proxy.paletteState.eraserMode == mode
+        return Button {
+            proxy.setEraserMode(mode)
+        } label: {
+            HStack(spacing: 4) {
+                Image(systemName: mode.systemImage)
+                    .font(.system(size: 17, weight: .semibold))
+                Text(mode.title)
+                    .font(.caption2.weight(.semibold))
+            }
+            .foregroundStyle(isSelected ? Color.accentColor : Color.primary)
+            .padding(.horizontal, 8)
+            .frame(height: 38)
+            .background(
+                isSelected ? Color.accentColor.opacity(0.14) : Color.clear,
+                in: RoundedRectangle(cornerRadius: 9)
+            )
+        }
+        .buttonStyle(.plain)
+        .accessibilityLabel(mode.title)
+        .accessibilityAddTraits(isSelected ? .isSelected : [])
+    }
+
+    private var eraserSizePreview: some View {
+        let widths = StudyCoachToolPaletteState.eraserWidths
+        let width = proxy.paletteState.eraserWidth
+        let maximum = widths.last ?? width
+        let diameter = 8 + 22 * CGFloat(width / max(maximum, 1))
+        return Circle()
+            .fill(Color.secondary.opacity(0.10))
+            .overlay { Circle().stroke(Color.secondary, lineWidth: 1.2) }
+            .frame(width: diameter, height: diameter)
+            .frame(width: 34, height: 34)
+            .accessibilityHidden(true)
     }
 
     @ViewBuilder
@@ -841,7 +1118,7 @@ private extension StudyCoachPaletteEraserMode {
         switch self {
         case .precision: "정밀"
         case .partial: "부분"
-        case .stroke: "전체"
+        case .stroke: "전체/획"
         }
     }
 
@@ -869,7 +1146,12 @@ private extension Color {
 @available(iOS 26.0, *)
 private extension StudyCoachRGBAColor {
     init(_ color: Color) {
-        let uiColor = UIColor(color)
+        // Ink is rendered over a fixed white PDF page. Resolve ColorPicker
+        // output in a light trait environment so PencilKit never persists a
+        // dark-mode semantic inverse of the color shown in the swatch.
+        let uiColor = UIColor(color).resolvedColor(
+            with: UITraitCollection(userInterfaceStyle: .light)
+        )
         var red: CGFloat = 0
         var green: CGFloat = 0
         var blue: CGFloat = 0
@@ -941,6 +1223,10 @@ private final class PaperKitPDFDiagnosticProxy: ObservableObject {
 
     func setEraserMode(_ mode: StudyCoachPaletteEraserMode) {
         updatePalette { $0.setEraserMode(mode) }
+    }
+
+    func setPenPattern(_ pattern: StudyCoachPenPattern) {
+        updatePalette { $0.setPenPattern(pattern) }
     }
 
     func selectPenColor(_ slot: Int) {
@@ -1068,6 +1354,89 @@ private struct PaperKitPDFPageContainer: UIViewControllerRepresentable {
 }
 
 @available(iOS 26.0, *)
+private struct PaperKitPencilSample {
+    let location: CGPoint
+    let timestamp: TimeInterval
+    let force: CGFloat
+    let altitude: CGFloat
+    let azimuth: CGFloat
+}
+
+/// A Pencil-only recognizer used only for ink features that PencilKit doesn't
+/// expose as a native drawing tool on iPadOS 26 (dotted ink and a genuinely
+/// fixed marker tip). It deliberately ignores fingers, leaving PaperKit as the
+/// sole owner of pan and zoom.
+@available(iOS 26.0, *)
+@MainActor
+private final class PaperKitPencilStrokeRecognizer: UIGestureRecognizer {
+    private(set) var samples: [PaperKitPencilSample] = []
+
+    override init(target: Any?, action: Selector?) {
+        super.init(target: target, action: action)
+        allowedTouchTypes = [NSNumber(value: UITouch.TouchType.pencil.rawValue)]
+        cancelsTouchesInView = true
+        delaysTouchesBegan = false
+        delaysTouchesEnded = false
+        requiresExclusiveTouchType = true
+    }
+
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+        guard let view, let pencil = touches.first(where: { $0.type == .pencil }) else {
+            state = .failed
+            return
+        }
+        samples.removeAll(keepingCapacity: true)
+        appendSamples(for: pencil, event: event, in: view)
+        state = .began
+    }
+
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
+        guard let view, let pencil = touches.first(where: { $0.type == .pencil }) else { return }
+        appendSamples(for: pencil, event: event, in: view)
+        state = .changed
+    }
+
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
+        if let view, let pencil = touches.first(where: { $0.type == .pencil }) {
+            appendSamples(for: pencil, event: event, in: view)
+        }
+        state = .ended
+    }
+
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) {
+        state = .cancelled
+    }
+
+    override func reset() {
+        super.reset()
+        samples.removeAll(keepingCapacity: true)
+    }
+
+    private func appendSamples(for touch: UITouch, event: UIEvent, in view: UIView) {
+        let touches = event.coalescedTouches(for: touch) ?? [touch]
+        for sample in touches {
+            let location = sample.location(in: view)
+            if let previous = samples.last,
+               hypot(
+                   location.x - previous.location.x,
+                   location.y - previous.location.y
+               ) < 0.15 {
+                continue
+            }
+            samples.append(
+                PaperKitPencilSample(
+                    location: location,
+                    timestamp: sample.timestamp,
+                    force: max(sample.force, 0.01),
+                    altitude: sample.altitudeAngle,
+                    azimuth: sample.azimuthAngle(in: view)
+                )
+            )
+        }
+    }
+}
+
+@available(iOS 26.0, *)
 @MainActor
 private final class PaperKitPDFPageViewController: UIViewController {
     /// Matching the coordinate density of the physically accepted 0.1.4
@@ -1092,6 +1461,13 @@ private final class PaperKitPDFPageViewController: UIViewController {
     private var observedNavigationRecognizers: [UIGestureRecognizer] = []
     private var activeNavigationRecognizerIDs: Set<ObjectIdentifier> = []
     private var activePinchRecognizerIDs: Set<ObjectIdentifier> = []
+    private var customInkRecognizer: PaperKitPencilStrokeRecognizer?
+    private let customInkPreviewLayer = CAShapeLayer()
+    private var customInkPreviewState: StudyCoachToolPaletteState?
+    private var eraserHoverRecognizer: UIHoverGestureRecognizer?
+    private let eraserCursorLayer = CAShapeLayer()
+    private var eraserCursorDiameter: CGFloat = 24
+    private var showsStrokeEraserCursor = false
 
     init(
         page: PDFPage,
@@ -1145,6 +1521,12 @@ private final class PaperKitPDFPageViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        // PDF paper is permanently white. PencilKit otherwise adapts some ink
+        // colors to dark appearance, which makes a black ColorPicker choice
+        // render as white (and vice versa) on the page.
+        overrideUserInterfaceStyle = .light
+        paperController.overrideUserInterfaceStyle = .light
+        paperController.view.overrideUserInterfaceStyle = .light
         view.backgroundColor = .secondarySystemBackground
 
         paperController.isEditable = true
@@ -1173,6 +1555,9 @@ private final class PaperKitPDFPageViewController: UIViewController {
             paperController.view.bottomAnchor.constraint(equalTo: view.bottomAnchor),
         ])
         paperController.didMove(toParent: self)
+
+        installCustomInkCapture()
+        installEraserHoverCursor()
 
         let pencilInteraction = UIPencilInteraction(delegate: self)
         paperController.view.addInteraction(pencilInteraction)
@@ -1211,6 +1596,8 @@ private final class PaperKitPDFPageViewController: UIViewController {
 
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
+        customInkPreviewLayer.frame = paperController.view.bounds
+        eraserCursorLayer.frame = paperController.view.bounds
         installNavigationObservationIfNeeded()
 
         let viewportSize = paperController.view.bounds.size
@@ -1266,45 +1653,385 @@ private final class PaperKitPDFPageViewController: UIViewController {
               view.window != nil,
               state != lastAppliedPaletteState else { return }
 
+        let usesCustomInkCapture = state.selectedTool == .pen && state.penPattern == .dotted
+            || state.selectedTool == .highlighter && state.highlighterAzimuthIndex != 1
+        customInkPreviewState = usesCustomInkCapture ? state : nil
+        customInkRecognizer?.isEnabled = usesCustomInkCapture
+        paperController.isEditable = !usesCustomInkCapture
+        if !usesCustomInkCapture {
+            clearCustomInkPreview()
+        }
+
+        showsStrokeEraserCursor = state.selectedTool == .eraser
+            && state.eraserMode == .stroke
+        eraserCursorDiameter = eraserCursorDisplayDiameter(for: state.eraserWidth)
+        if !showsStrokeEraserCursor {
+            eraserCursorLayer.isHidden = true
+        }
+
         switch state.selectedTool {
         case .pen:
-            let type = PKInkingTool.InkType.pen
-            let width = CGFloat(state.penWidth).clamped(to: type.validWidthRange)
-            paperController.drawingTool = PKInkingTool(
-                type,
-                color: UIColor(state.penColor),
-                width: width
-            )
+            if usesCustomInkCapture {
+                paperController.drawingTool = PKLassoTool()
+            } else {
+                let type = PKInkingTool.InkType.pen
+                let width = CGFloat(state.penWidth).clamped(to: type.validWidthRange)
+                paperController.drawingTool = PKInkingTool(
+                    type,
+                    color: UIColor(state.penColor),
+                    width: width
+                )
+            }
         case .highlighter:
-            let type = PKInkingTool.InkType.marker
-            let width = CGFloat(state.highlighterWidth).clamped(to: type.validWidthRange)
-            paperController.drawingTool = PKInkingTool(
-                type,
-                color: UIColor(state.highlighterColor).withAlphaComponent(
-                    CGFloat(state.highlighterOpacity)
-                ),
-                width: width,
-                azimuth: CGFloat(state.highlighterAzimuth)
-            )
+            if usesCustomInkCapture {
+                paperController.drawingTool = PKLassoTool()
+            } else {
+                let type = PKInkingTool.InkType.marker
+                let width = CGFloat(state.highlighterWidth).clamped(to: type.validWidthRange)
+                paperController.drawingTool = PKInkingTool(
+                    type,
+                    color: UIColor(state.highlighterColor).withAlphaComponent(
+                        CGFloat(state.highlighterOpacity)
+                    ),
+                    width: width,
+                    azimuth: CGFloat(state.highlighterAzimuth)
+                )
+            }
         case .eraser:
             let type: PKEraserTool.EraserType = switch state.eraserMode {
             case .precision: .fixedWidthBitmap
-            case .partial: .bitmap
+            case .partial: .fixedWidthBitmap
             case .stroke: .vector
             }
-            // PencilKit's vector eraser removes an entire touched stroke, but
-            // its own valid-width range can collapse the supplied width. Keep
-            // the user's selected hit/cursor size for vector mode while still
-            // clamping bitmap modes to their documented native ranges.
+            // Both partial modes use fixedWidthBitmap so the selected slider
+            // value has a predictable physical diameter. Precision is the
+            // deliberately smaller version of the same controllable eraser.
+            let requestedWidth = state.eraserMode == .precision
+                ? CGFloat(state.eraserWidth) * 0.35
+                : CGFloat(state.eraserWidth)
             let width = type == .vector
-                ? CGFloat(state.eraserWidth)
-                : CGFloat(state.eraserWidth).clamped(to: type.validWidthRange)
+                ? requestedWidth
+                : requestedWidth.clamped(to: type.validWidthRange)
             paperController.drawingTool = PKEraserTool(type, width: width)
         case .lasso, .text, .image:
             paperController.drawingTool = PKLassoTool()
         }
         lastAppliedPaletteState = state
         paperController.becomeFirstResponder()
+    }
+
+    private func installCustomInkCapture() {
+        customInkPreviewLayer.fillColor = UIColor.clear.cgColor
+        customInkPreviewLayer.lineJoin = .round
+        customInkPreviewLayer.isHidden = true
+        customInkPreviewLayer.zPosition = 10_000
+        paperController.view.layer.addSublayer(customInkPreviewLayer)
+
+        let recognizer = PaperKitPencilStrokeRecognizer(
+            target: self,
+            action: #selector(customInkGestureChanged(_:))
+        )
+        recognizer.isEnabled = false
+        paperController.view.addGestureRecognizer(recognizer)
+        customInkRecognizer = recognizer
+    }
+
+    private func installEraserHoverCursor() {
+        eraserCursorLayer.fillColor = UIColor.systemGray.withAlphaComponent(0.10).cgColor
+        eraserCursorLayer.strokeColor = UIColor.systemGray.cgColor
+        eraserCursorLayer.lineWidth = 1.25
+        eraserCursorLayer.isHidden = true
+        eraserCursorLayer.zPosition = 10_001
+        paperController.view.layer.addSublayer(eraserCursorLayer)
+
+        let recognizer = UIHoverGestureRecognizer(
+            target: self,
+            action: #selector(eraserHoverChanged(_:))
+        )
+        recognizer.allowedTouchTypes = [
+            NSNumber(value: UITouch.TouchType.pencil.rawValue),
+        ]
+        paperController.view.addGestureRecognizer(recognizer)
+        eraserHoverRecognizer = recognizer
+    }
+
+    @objc
+    private func customInkGestureChanged(_ recognizer: PaperKitPencilStrokeRecognizer) {
+        guard let state = customInkPreviewState else {
+            clearCustomInkPreview()
+            return
+        }
+
+        switch recognizer.state {
+        case .began, .changed:
+            drawCustomInkPreview(samples: recognizer.samples, state: state)
+        case .ended:
+            let samples = recognizer.samples
+            clearCustomInkPreview()
+            appendCustomInk(samples: samples, state: state)
+        case .cancelled, .failed:
+            clearCustomInkPreview()
+        case .possible:
+            break
+        @unknown default:
+            clearCustomInkPreview()
+        }
+    }
+
+    @objc
+    private func eraserHoverChanged(_ recognizer: UIHoverGestureRecognizer) {
+        guard showsStrokeEraserCursor else {
+            eraserCursorLayer.isHidden = true
+            return
+        }
+
+        switch recognizer.state {
+        case .began, .changed:
+            let location = recognizer.location(in: paperController.view)
+            let radius = eraserCursorDiameter / 2
+            eraserCursorLayer.path = UIBezierPath(
+                ovalIn: CGRect(
+                    x: location.x - radius,
+                    y: location.y - radius,
+                    width: eraserCursorDiameter,
+                    height: eraserCursorDiameter
+                )
+            ).cgPath
+            eraserCursorLayer.isHidden = false
+        case .ended, .cancelled, .failed:
+            eraserCursorLayer.isHidden = true
+        case .possible:
+            break
+        @unknown default:
+            eraserCursorLayer.isHidden = true
+        }
+    }
+
+    private func drawCustomInkPreview(
+        samples: [PaperKitPencilSample],
+        state: StudyCoachToolPaletteState
+    ) {
+        guard let first = samples.first else {
+            clearCustomInkPreview()
+            return
+        }
+
+        let path = UIBezierPath()
+        path.move(to: first.location)
+        for sample in samples.dropFirst() {
+            path.addLine(to: sample.location)
+        }
+
+        let isDotted = state.selectedTool == .pen && state.penPattern == .dotted
+        customInkPreviewLayer.path = path.cgPath
+        customInkPreviewLayer.strokeColor = UIColor(
+            isDotted ? state.penColor : state.highlighterColor
+        ).withAlphaComponent(
+            isDotted ? 1 : CGFloat(state.highlighterOpacity)
+        ).cgColor
+        customInkPreviewLayer.lineWidth = previewLineWidth(for: state)
+        customInkPreviewLayer.lineCap = isDotted ? .round : .butt
+        customInkPreviewLayer.lineDashPattern = isDotted
+            ? [
+                NSNumber(value: Double(max(customInkPreviewLayer.lineWidth * 0.08, 0.6))),
+                NSNumber(value: Double(max(customInkPreviewLayer.lineWidth * 2.25, 3))),
+            ]
+            : nil
+        customInkPreviewLayer.isHidden = false
+    }
+
+    private func clearCustomInkPreview() {
+        customInkPreviewLayer.path = nil
+        customInkPreviewLayer.lineDashPattern = nil
+        customInkPreviewLayer.isHidden = true
+    }
+
+    private func appendCustomInk(
+        samples: [PaperKitPencilSample],
+        state: StudyCoachToolPaletteState
+    ) {
+        let contentSamples = samples.compactMap { contentSample(from: $0) }
+        guard !contentSamples.isEmpty, var markup = paperController.markup else { return }
+
+        let strokes: [PKStroke]
+        if state.selectedTool == .pen && state.penPattern == .dotted {
+            strokes = makeDottedStrokes(
+                samples: contentSamples,
+                color: UIColor(state.penColor),
+                width: CGFloat(state.penWidth)
+            )
+        } else if state.selectedTool == .highlighter {
+            strokes = [
+                makeFixedHighlighterStroke(
+                    samples: contentSamples,
+                    color: UIColor(state.highlighterColor),
+                    width: CGFloat(state.highlighterWidth),
+                    opacity: CGFloat(state.highlighterOpacity),
+                    azimuth: CGFloat(state.highlighterAzimuth)
+                ),
+            ]
+        } else {
+            return
+        }
+
+        guard !strokes.isEmpty else { return }
+        markup.append(contentsOf: PKDrawing(strokes: strokes))
+        paperController.markup = markup
+        saveMarkup()
+    }
+
+    private func contentSample(
+        from sample: PaperKitPencilSample
+    ) -> PaperKitPencilSample? {
+        let viewportBounds = paperController.view.bounds.standardized
+        let visibleFrame = paperController.contentVisibleFrame.standardized
+        guard viewportBounds.isUsableViewport, visibleFrame.isUsableViewport else { return nil }
+
+        return PaperKitPencilSample(
+            location: CGPoint(
+                x: visibleFrame.minX
+                    + (sample.location.x - viewportBounds.minX)
+                    / viewportBounds.width * visibleFrame.width,
+                y: visibleFrame.minY
+                    + (sample.location.y - viewportBounds.minY)
+                    / viewportBounds.height * visibleFrame.height
+            ),
+            timestamp: sample.timestamp,
+            force: sample.force,
+            altitude: sample.altitude,
+            azimuth: sample.azimuth
+        )
+    }
+
+    private func makeDottedStrokes(
+        samples: [PaperKitPencilSample],
+        color: UIColor,
+        width: CGFloat
+    ) -> [PKStroke] {
+        let locations = evenlySpacedLocations(
+            samples.map(\.location),
+            spacing: max(width * 2.8, 3)
+        )
+        let ink = PKInk(.pen, color: color)
+        let pointSize = CGSize(width: width, height: width)
+
+        return locations.enumerated().map { index, location in
+            // A tiny two-point path gives the pen renderer a round, stable dot
+            // while remaining visually stationary at normal and zoomed scale.
+            let epsilon = max(width * 0.015, 0.02)
+            let points = [
+                PKStrokePoint(
+                    location: location,
+                    timeOffset: 0,
+                    size: pointSize,
+                    opacity: 1,
+                    force: 1,
+                    azimuth: 0,
+                    altitude: .pi / 2
+                ),
+                PKStrokePoint(
+                    location: CGPoint(x: location.x + epsilon, y: location.y),
+                    timeOffset: 0.001,
+                    size: pointSize,
+                    opacity: 1,
+                    force: 1,
+                    azimuth: 0,
+                    altitude: .pi / 2
+                ),
+            ]
+            let path = PKStrokePath(
+                controlPoints: points,
+                creationDate: Date(timeIntervalSince1970: TimeInterval(index) * 0.002)
+            )
+            return PKStroke(ink: ink, path: path)
+        }
+    }
+
+    private func makeFixedHighlighterStroke(
+        samples: [PaperKitPencilSample],
+        color: UIColor,
+        width: CGFloat,
+        opacity: CGFloat,
+        azimuth: CGFloat
+    ) -> PKStroke {
+        let startTime = samples.first?.timestamp ?? 0
+        var points = samples.map { sample in
+            PKStrokePoint(
+                location: sample.location,
+                timeOffset: max(0, sample.timestamp - startTime),
+                size: CGSize(width: width * 2.8, height: max(width * 0.62, 1)),
+                opacity: opacity,
+                force: 1,
+                azimuth: azimuth,
+                altitude: .pi / 2
+            )
+        }
+        if points.count == 1, let point = points.first {
+            points.append(
+                PKStrokePoint(
+                    location: CGPoint(x: point.location.x + 0.02, y: point.location.y),
+                    timeOffset: 0.001,
+                    size: point.size,
+                    opacity: point.opacity,
+                    force: point.force,
+                    azimuth: azimuth,
+                    altitude: .pi / 2
+                )
+            )
+        }
+        let path = PKStrokePath(controlPoints: points, creationDate: Date())
+        return PKStroke(ink: PKInk(.marker, color: color), path: path)
+    }
+
+    private func evenlySpacedLocations(
+        _ locations: [CGPoint],
+        spacing: CGFloat
+    ) -> [CGPoint] {
+        guard let first = locations.first else { return [] }
+        guard locations.count > 1 else { return [first] }
+
+        var result = [first]
+        var cumulativeDistance: CGFloat = 0
+        var nextDotDistance = spacing
+
+        for (start, end) in zip(locations, locations.dropFirst()) {
+            let dx = end.x - start.x
+            let dy = end.y - start.y
+            let segmentLength = hypot(dx, dy)
+            guard segmentLength > 0 else { continue }
+
+            while nextDotDistance <= cumulativeDistance + segmentLength {
+                let fraction = (nextDotDistance - cumulativeDistance) / segmentLength
+                result.append(
+                    CGPoint(
+                        x: start.x + dx * fraction,
+                        y: start.y + dy * fraction
+                    )
+                )
+                nextDotDistance += spacing
+            }
+            cumulativeDistance += segmentLength
+        }
+        return result
+    }
+
+    private func previewLineWidth(for state: StudyCoachToolPaletteState) -> CGFloat {
+        let contentWidth = state.selectedTool == .pen
+            ? CGFloat(state.penWidth)
+            : CGFloat(state.highlighterWidth)
+        return max(contentWidth * currentPresentationScale, 1)
+    }
+
+    private func eraserCursorDisplayDiameter(for width: Double) -> CGFloat {
+        (CGFloat(width).clamped(to: 4...96) * currentPresentationScale)
+            .clamped(to: 12...160)
+    }
+
+    private var currentPresentationScale: CGFloat {
+        let viewport = paperController.view.bounds.standardized
+        let visible = paperController.contentVisibleFrame.standardized
+        guard viewport.isUsableViewport, visible.isUsableViewport else { return 1 }
+        return min(viewport.width / visible.width, viewport.height / visible.height)
     }
 
     func undoMarkup() {

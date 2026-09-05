@@ -20,6 +20,13 @@ enum StudyCoachPaletteEraserMode: String, CaseIterable, Codable, Hashable, Ident
     var id: Self { self }
 }
 
+enum StudyCoachPenPattern: String, CaseIterable, Codable, Hashable, Identifiable, Sendable {
+    case solid
+    case dotted
+
+    var id: Self { self }
+}
+
 struct StudyCoachRGBAColor: Codable, Equatable, Hashable, Sendable {
     var red: Double
     var green: Double
@@ -71,6 +78,7 @@ struct StudyCoachToolPaletteState: Codable, Equatable, Sendable {
     private(set) var highlighterOpacity: Double
     private(set) var highlighterAzimuthIndex: Int
     private(set) var eraserMode: StudyCoachPaletteEraserMode
+    private(set) var penPattern: StudyCoachPenPattern
     private(set) var isContextPanelExpanded: Bool
 
     init(
@@ -96,8 +104,12 @@ struct StudyCoachToolPaletteState: Codable, Equatable, Sendable {
         selectedPenColorSlot = 0
         selectedHighlighterColorSlot = 0
         highlighterOpacity = 0.35
-        highlighterAzimuthIndex = 0
+        // PaperKit's native marker behavior is closest to a 45-degree tip.
+        // Keep that proven native path as the default; selecting 0 or 90
+        // degrees explicitly enables the fixed-angle capture path.
+        highlighterAzimuthIndex = 1
         eraserMode = .precision
+        penPattern = .solid
         isContextPanelExpanded = true
     }
 
@@ -159,6 +171,10 @@ struct StudyCoachToolPaletteState: Codable, Equatable, Sendable {
         eraserMode = mode
     }
 
+    mutating func setPenPattern(_ pattern: StudyCoachPenPattern) {
+        penPattern = pattern
+    }
+
     mutating func selectPenColor(slot: Int) {
         selectedPenColorSlot = Self.clampedLevel(slot, count: penColors.count)
     }
@@ -193,6 +209,7 @@ struct StudyCoachToolPaletteState: Codable, Equatable, Sendable {
         case highlighterOpacity
         case highlighterAzimuthIndex
         case eraserMode
+        case penPattern
         case isContextPanelExpanded
     }
 
@@ -260,6 +277,10 @@ struct StudyCoachToolPaletteState: Codable, Equatable, Sendable {
             StudyCoachPaletteEraserMode.self,
             forKey: .eraserMode
         ) ?? eraserMode
+        penPattern = try container.decodeIfPresent(
+            StudyCoachPenPattern.self,
+            forKey: .penPattern
+        ) ?? penPattern
         isContextPanelExpanded = try container.decodeIfPresent(
             Bool.self,
             forKey: .isContextPanelExpanded
@@ -281,6 +302,7 @@ struct StudyCoachToolPaletteState: Codable, Equatable, Sendable {
         try container.encode(highlighterOpacity, forKey: .highlighterOpacity)
         try container.encode(highlighterAzimuthIndex, forKey: .highlighterAzimuthIndex)
         try container.encode(eraserMode, forKey: .eraserMode)
+        try container.encode(penPattern, forKey: .penPattern)
         try container.encode(isContextPanelExpanded, forKey: .isContextPanelExpanded)
     }
 
