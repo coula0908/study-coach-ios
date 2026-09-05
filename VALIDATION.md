@@ -87,6 +87,7 @@ remaining acceptance checks pass in Swift Playgrounds on the target iPad.
 - Xcode 16 fallback build and iPad Simulator tests: passed
 - Xcode 26 normal build, strict Swift 6 concurrency build, and iPad Simulator
   tests: passed
+- Annotated package tag: `0.1.25`, target commit `f52bc26`, pushed
 - Physical Swift Playgrounds compilation and behavior: pending
 - Required physical checks: no PDF movement while toggling row; black/white and
   edited colors match; solid and dotted pen both write at fit and maximum zoom;

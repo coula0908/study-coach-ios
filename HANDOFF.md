@@ -34,8 +34,7 @@ old version and tag values.
 - Repository: `https://github.com/coula0908/study-coach-ios`
 - Active local branch: `codex/paperkit-adaptive-background`
 - Remote development branch: `main`
-- Latest installable package tag: `0.1.24`; source is preparing the `0.1.25`
-  physical candidate
+- Latest installable package tag: `0.1.25`
 - Latest runtime implementation commit: `b603868` — floating toolbar,
   Pencil-only dotted/fixed-angle paths, light-stable colors, corrected eraser
   widths/cursor, and newest-first PhotoKit tray
@@ -54,14 +53,16 @@ old version and tag values.
 - `0.1.24` annotated tag target commit: `e6f375f` — document tabs and
   contextual tool controls; physical testing found the defects now addressed
   by `0.1.25`
+- `0.1.25` annotated tag target commit: `f52bc26` — floating advanced-tool
+  physical candidate after full Apple CI success
 - Package/module: `StudyCoachCore`
 - Production entry point: `StudyCoachRootView()`
 - Current isolated candidate entry point:
   `StudyCoachPaperKitPDFDiagnosticView()` on iPadOS 26 or later
 - Source version `0.1.25` keeps the accepted PaperKit editor and `0.1.19`
   renderer. GitHub Actions run `33947081676` passes Xcode 16 fallback, Xcode 26
-  normal and strict Swift 6 builds, and both iPad Simulator jobs. The source
-  still needs a final version-record commit/tag and physical iPadOS 26 testing.
+  normal and strict Swift 6 builds, and both iPad Simulator jobs. Annotated tag
+  `0.1.25` points to `f52bc26`; physical iPadOS 26 testing is pending.
 
 ## In Progress
 
