@@ -5,6 +5,7 @@ import CryptoKit
 import PDFKit
 import PaperKit
 import PencilKit
+import Observation
 @preconcurrency import Photos
 import PhotosUI
 import UIKit
@@ -233,7 +234,7 @@ private final class PaperKitPDFDiagnosticModel: ObservableObject {
 }
 
 @available(iOS 26.0, *)
-private enum PaperKitPDFDiagnosticStorage {
+enum PaperKitPDFDiagnosticStorage {
     static let lastDocumentKey = "StudyCoachCore.PaperKitPDFAdaptive.lastDocumentID"
     static let lastDocumentNameKey = "StudyCoachCore.PaperKitPDFAdaptive.lastDocumentName"
     static let openDocumentsKey = "StudyCoachCore.PaperKitPDFAdaptive.openDocuments.v1"
@@ -407,11 +408,16 @@ private struct PaperKitPDFDiagnosticWorkspace: View {
     @State private var selectedPhoto: PhotosPickerItem?
     @State private var isShowingTextEditor = false
     @State private var draftText = ""
+    @AppStorage("StudyCoach.pageScrollHorizontal") private var horizontalPages = false
+    @State private var exportedPDF: URL?
+    @State private var isExporting = false
+    @State private var showingExport = false
+    @State private var switchingPage = false
 
     var body: some View {
         ZStack(alignment: .top) {
             if let page = model.currentPage {
-                ZStack(alignment: .bottomTrailing) {
+                ZStack {
                     PaperKitPDFPageContainer(
                         page: page,
                         documentID: model.documentID,
@@ -419,9 +425,6 @@ private struct PaperKitPDFDiagnosticWorkspace: View {
                         proxy: proxy
                     )
                     .id("\(model.documentID)-\(model.pageIndex)")
-
-                    documentActionsOverlay
-                        .padding(12)
                 }
             } else {
                 ContentUnavailableView {
@@ -437,6 +440,11 @@ private struct PaperKitPDFDiagnosticWorkspace: View {
             }
 
             toolbar
+        }
+        .onAppear { configurePageNavigation() }
+        .onChange(of: horizontalPages) { _, _ in configurePageNavigation() }
+        .sheet(isPresented: $showingExport) {
+            if let exportedPDF { PaperKitShareSheet(url: exportedPDF) }
         }
         .fileImporter(
             isPresented: $isShowingPDFImporter,
@@ -511,7 +519,10 @@ private struct PaperKitPDFDiagnosticWorkspace: View {
 
     private var toolbar: some View {
         VStack(spacing: 5) {
-            documentTabsBar
+            HStack(spacing: 8) {
+                documentTabsBar
+                if model.document != nil { documentActionsOverlay }
+            }
 
             if model.document != nil {
                 primaryToolBar
@@ -570,8 +581,7 @@ private struct PaperKitPDFDiagnosticWorkspace: View {
     private func documentTab(_ tab: PaperKitPDFDocumentTab) -> some View {
         let isSelected = model.documentID == tab.id
         return Button {
-            proxy.save()
-            model.selectDocument(tab.id)
+            afterSaving { model.selectDocument(tab.id) }
         } label: {
             HStack(spacing: 6) {
                 Image(systemName: "doc.text")
@@ -649,8 +659,7 @@ private struct PaperKitPDFDiagnosticWorkspace: View {
     private var documentActionsOverlay: some View {
         HStack(spacing: 3) {
             compactIconButton("chevron.left", label: "이전 페이지") {
-                proxy.save()
-                model.goToPreviousPage()
+                afterSaving { model.goToPreviousPage() }
             }
             .disabled(model.pageIndex <= 0)
 
@@ -659,20 +668,72 @@ private struct PaperKitPDFDiagnosticWorkspace: View {
                 .frame(minWidth: 48)
 
             compactIconButton("chevron.right", label: "다음 페이지") {
-                proxy.save()
-                model.goToNextPage()
+                afterSaving { model.goToNextPage() }
             }
             .disabled(model.pageIndex + 1 >= model.pageCount)
 
             Divider().frame(height: 20)
             compactIconButton("arrow.uturn.backward", label: "실행 취소") { proxy.undo() }
             compactIconButton("arrow.uturn.forward", label: "다시 실행") { proxy.redo() }
-            compactIconButton("square.and.arrow.down", label: "저장") { proxy.save() }
+            compactIconButton("square.and.arrow.up", label: "필기 포함 PDF 내보내기") {
+                exportPDF()
+            }
+            .disabled(isExporting)
+            if isExporting { ProgressView().scaleEffect(0.7) }
+            Menu {
+                Picker("페이지 스크롤 방향", selection: $horizontalPages) {
+                    Label("수직", systemImage: "arrow.up.arrow.down").tag(false)
+                    Label("수평", systemImage: "arrow.left.arrow.right").tag(true)
+                }
+            } label: {
+                Image(systemName: "ellipsis").frame(width: 36, height: 36)
+            }
+            .accessibilityLabel("더 보기")
         }
         .padding(.horizontal, 7)
         .padding(.vertical, 4)
         .background(.ultraThinMaterial, in: Capsule())
         .overlay { Capsule().stroke(Color.primary.opacity(0.08)) }
+    }
+
+    private func configurePageNavigation() {
+        proxy.horizontalPages = horizontalPages
+        proxy.turnPage = { delta in
+            afterSaving {
+                if delta > 0 { model.goToNextPage() } else { model.goToPreviousPage() }
+            }
+        }
+    }
+
+    private func afterSaving(_ action: @escaping @MainActor () -> Void) {
+        guard !switchingPage else { return }
+        switchingPage = true
+        proxy.save()
+        Task { @MainActor in
+            do {
+                try await PaperKitOrderedSave.flush()
+                action()
+            } catch { proxy.reportError("저장하지 못해 페이지를 유지합니다: \(error.localizedDescription)") }
+            switchingPage = false
+        }
+    }
+
+    private func exportPDF() {
+        guard !isExporting, let document = model.document else { return }
+        isExporting = true
+        let documentID = model.documentID
+        let name = model.documentName
+        proxy.save()
+        Task { @MainActor in
+            do {
+                try await PaperKitOrderedSave.flush()
+                exportedPDF = try await PaperKitAnnotatedExport.make(
+                    document: document, documentID: documentID, name: name
+                )
+                showingExport = true
+            } catch { proxy.reportError("내보내기 실패: \(error.localizedDescription)") }
+            isExporting = false
+        }
     }
 
     private var activeToolControls: AnyView {
@@ -1171,12 +1232,14 @@ private extension StudyCoachRGBAColor {
 
 @available(iOS 26.0, *)
 @MainActor
-private final class PaperKitPDFDiagnosticProxy: ObservableObject {
+final class PaperKitPDFDiagnosticProxy: ObservableObject {
     private static let palettePreferencesKey = "StudyCoachCore.PaperKitPDFAdaptive.ToolPalette.v1"
 
     @Published var statusMessage = "준비됨"
     @Published var statusIsError = false
     @Published private(set) var paletteState = StudyCoachToolPaletteState()
+    var horizontalPages = false
+    var turnPage: ((Int) -> Void)?
     private weak var controller: PaperKitPDFPageViewController?
 
     init() {
@@ -1354,7 +1417,7 @@ private struct PaperKitPDFPageContainer: UIViewControllerRepresentable {
 }
 
 @available(iOS 26.0, *)
-private struct PaperKitPencilSample {
+struct PaperKitPencilSample {
     let location: CGPoint
     let timestamp: TimeInterval
     let force: CGFloat
@@ -1438,7 +1501,31 @@ private final class PaperKitPencilStrokeRecognizer: UIGestureRecognizer {
 
 @available(iOS 26.0, *)
 @MainActor
-private final class PaperKitPDFPageViewController: UIViewController {
+private final class PaperKitPencilContactObserver: UIGestureRecognizer {
+    var contact: ((CGPoint?) -> Void)?
+    override func canPrevent(_ other: UIGestureRecognizer) -> Bool { false }
+    override func canBePrevented(by other: UIGestureRecognizer) -> Bool { false }
+    override func touchesBegan(_ touches: Set<UITouch>, with event: UIEvent) {
+        if let touch = touches.first(where: { $0.type == .pencil }) {
+            contact?(touch.location(in: view))
+        }
+    }
+    override func touchesMoved(_ touches: Set<UITouch>, with event: UIEvent) {
+        touchesBegan(touches, with: event)
+    }
+    override func touchesEnded(_ touches: Set<UITouch>, with event: UIEvent) {
+        contact?(nil)
+        state = .failed
+    }
+    override func touchesCancelled(_ touches: Set<UITouch>, with event: UIEvent) {
+        contact?(nil)
+        state = .failed
+    }
+}
+
+@available(iOS 26.0, *)
+@MainActor
+final class PaperKitPDFPageViewController: UIViewController {
     /// Matching the coordinate density of the physically accepted 0.1.4
     /// standalone canvas makes system tool widths useful on PDF-sized pages.
     private static let logicalPageScale: CGFloat = 2
@@ -1463,11 +1550,16 @@ private final class PaperKitPDFPageViewController: UIViewController {
     private var activePinchRecognizerIDs: Set<ObjectIdentifier> = []
     private var customInkRecognizer: PaperKitPencilStrokeRecognizer?
     private let customInkPreviewLayer = CAShapeLayer()
+    private let inkPreviewImage = UIImageView()
     private var customInkPreviewState: StudyCoachToolPaletteState?
     private var eraserHoverRecognizer: UIHoverGestureRecognizer?
     private let eraserCursorLayer = CAShapeLayer()
     private var eraserCursorDiameter: CGFloat = 24
     private var showsStrokeEraserCursor = false
+    private var observingMarkup = false
+    private var pageTurnCandidate: Int = 0
+    private var pageTurnRecognizerID: ObjectIdentifier?
+    private var pagePanStart = CGRect.null
 
     init(
         page: PDFPage,
@@ -1558,6 +1650,7 @@ private final class PaperKitPDFPageViewController: UIViewController {
 
         installCustomInkCapture()
         installEraserHoverCursor()
+        observeMarkupChanges()
 
         let pencilInteraction = UIPencilInteraction(delegate: self)
         paperController.view.addInteraction(pencilInteraction)
@@ -1630,19 +1723,26 @@ private final class PaperKitPDFPageViewController: UIViewController {
         )
         let proxy = proxy
 
+        let saving = PaperKitOrderedSave.enqueue(markup, to: url)
         Task {
             do {
-                let data = try await markup.dataRepresentation()
-                try FileManager.default.createDirectory(
-                    at: url.deletingLastPathComponent(),
-                    withIntermediateDirectories: true
-                )
-                try data.write(to: url, options: .atomic)
-                proxy?.statusMessage = "\(pageIndex + 1)페이지 PaperMarkup 저장 완료"
-                proxy?.statusIsError = false
+                try await saving.value
             } catch {
                 proxy?.statusMessage = "\(pageIndex + 1)페이지 저장 실패: \(error.localizedDescription)"
                 proxy?.statusIsError = true
+            }
+        }
+    }
+
+    private func observeMarkupChanges() {
+        observingMarkup = true
+        withObservationTracking {
+            _ = paperController.markup
+        } onChange: { [weak self] in
+            Task { @MainActor [weak self] in
+                guard let self else { return }
+                self.observeMarkupChanges()
+                self.saveMarkup()
             }
         }
     }
@@ -1721,6 +1821,8 @@ private final class PaperKitPDFPageViewController: UIViewController {
     }
 
     private func installCustomInkCapture() {
+        inkPreviewImage.isUserInteractionEnabled = false
+        paperController.view.addSubview(inkPreviewImage)
         customInkPreviewLayer.fillColor = UIColor.clear.cgColor
         customInkPreviewLayer.lineJoin = .round
         customInkPreviewLayer.isHidden = true
@@ -1753,6 +1855,30 @@ private final class PaperKitPDFPageViewController: UIViewController {
         ]
         paperController.view.addGestureRecognizer(recognizer)
         eraserHoverRecognizer = recognizer
+        let contact = PaperKitPencilContactObserver(target: nil, action: nil)
+        contact.cancelsTouchesInView = false
+        contact.delaysTouchesBegan = false
+        contact.delaysTouchesEnded = false
+        contact.allowedTouchTypes = [NSNumber(value: UITouch.TouchType.pencil.rawValue)]
+        contact.contact = { [weak self] location in self?.showEraserCursor(at: location) }
+        paperController.view.addGestureRecognizer(contact)
+    }
+
+    private func showEraserCursor(at location: CGPoint?) {
+        guard showsStrokeEraserCursor, let location else {
+            eraserCursorLayer.isHidden = true
+            return
+        }
+        eraserCursorDiameter = eraserCursorDisplayDiameter(for: proxy?.paletteState.eraserWidth ?? 16)
+        let radius = eraserCursorDiameter / 2
+        CATransaction.begin()
+        CATransaction.setDisableActions(true)
+        eraserCursorLayer.path = UIBezierPath(ovalIn: CGRect(
+            x: location.x - radius, y: location.y - radius,
+            width: radius * 2, height: radius * 2
+        )).cgPath
+        eraserCursorLayer.isHidden = false
+        CATransaction.commit()
     }
 
     @objc
@@ -1767,8 +1893,11 @@ private final class PaperKitPDFPageViewController: UIViewController {
             drawCustomInkPreview(samples: recognizer.samples, state: state)
         case .ended:
             let samples = recognizer.samples
-            clearCustomInkPreview()
             appendCustomInk(samples: samples, state: state)
+            Task { @MainActor [weak self] in
+                await Task.yield()
+                self?.clearCustomInkPreview()
+            }
         case .cancelled, .failed:
             clearCustomInkPreview()
         case .possible:
@@ -1811,36 +1940,26 @@ private final class PaperKitPDFPageViewController: UIViewController {
         samples: [PaperKitPencilSample],
         state: StudyCoachToolPaletteState
     ) {
-        guard let first = samples.first else {
+        guard !samples.isEmpty else {
             clearCustomInkPreview()
             return
         }
 
-        let path = UIBezierPath()
-        path.move(to: first.location)
-        for sample in samples.dropFirst() {
-            path.addLine(to: sample.location)
-        }
-
-        let isDotted = state.selectedTool == .pen && state.penPattern == .dotted
-        customInkPreviewLayer.path = path.cgPath
-        customInkPreviewLayer.strokeColor = UIColor(
-            isDotted ? state.penColor : state.highlighterColor
-        ).withAlphaComponent(
-            isDotted ? 1 : CGFloat(state.highlighterOpacity)
-        ).cgColor
-        customInkPreviewLayer.lineWidth = previewLineWidth(for: state)
-        customInkPreviewLayer.lineCap = isDotted ? .round : .butt
-        customInkPreviewLayer.lineDashPattern = isDotted
-            ? [
-                NSNumber(value: Double(max(customInkPreviewLayer.lineWidth * 0.08, 0.6))),
-                NSNumber(value: Double(max(customInkPreviewLayer.lineWidth * 2.25, 3))),
-            ]
-            : nil
-        customInkPreviewLayer.isHidden = false
+        let drawing = customDrawing(samples: samples, state: state)
+        let bounds = drawing.bounds.insetBy(dx: -2, dy: -2)
+        guard !bounds.isEmpty, !bounds.isInfinite else { return }
+        let scale = min(max(currentPresentationScale * 2, 0.1),
+                        2048 / max(bounds.width, bounds.height),
+                        sqrt(1_500_000 / max(bounds.width * bounds.height, 1)))
+        inkPreviewImage.image = drawing.image(from: bounds, scale: scale)
+        inkPreviewImage.frame = backgroundView.convert(bounds, to: paperController.view)
+        inkPreviewImage.isHidden = false
+        paperController.view.bringSubviewToFront(inkPreviewImage)
     }
 
     private func clearCustomInkPreview() {
+        inkPreviewImage.image = nil
+        inkPreviewImage.isHidden = true
         customInkPreviewLayer.path = nil
         customInkPreviewLayer.lineDashPattern = nil
         customInkPreviewLayer.isHidden = true
@@ -1850,8 +1969,25 @@ private final class PaperKitPDFPageViewController: UIViewController {
         samples: [PaperKitPencilSample],
         state: StudyCoachToolPaletteState
     ) {
+        let drawing = customDrawing(samples: samples, state: state)
+        guard !drawing.strokes.isEmpty, var markup = paperController.markup else { return }
+        markup.append(contentsOf: drawing)
+        replaceMarkupUndoably(markup)
+        saveMarkup()
+    }
+
+    private func replaceMarkupUndoably(_ markup: PaperMarkup) {
+        guard let previous = paperController.markup else { return }
+        paperController.undoManager?.registerUndo(withTarget: self) { target in
+            target.replaceMarkupUndoably(previous)
+        }
+        paperController.markup = markup
+    }
+
+    private func customDrawing(samples: [PaperKitPencilSample],
+                               state: StudyCoachToolPaletteState) -> PKDrawing {
         let contentSamples = samples.compactMap { contentSample(from: $0) }
-        guard !contentSamples.isEmpty, var markup = paperController.markup else { return }
+        guard !contentSamples.isEmpty else { return PKDrawing() }
 
         let strokes: [PKStroke]
         if state.selectedTool == .pen && state.penPattern == .dotted {
@@ -1871,13 +2007,9 @@ private final class PaperKitPDFPageViewController: UIViewController {
                 ),
             ]
         } else {
-            return
+            return PKDrawing()
         }
-
-        guard !strokes.isEmpty else { return }
-        markup.append(contentsOf: PKDrawing(strokes: strokes))
-        paperController.markup = markup
-        saveMarkup()
+        return PKDrawing(strokes: strokes)
     }
 
     private func contentSample(
@@ -1888,14 +2020,7 @@ private final class PaperKitPDFPageViewController: UIViewController {
         guard viewportBounds.isUsableViewport, visibleFrame.isUsableViewport else { return nil }
 
         return PaperKitPencilSample(
-            location: CGPoint(
-                x: visibleFrame.minX
-                    + (sample.location.x - viewportBounds.minX)
-                    / viewportBounds.width * visibleFrame.width,
-                y: visibleFrame.minY
-                    + (sample.location.y - viewportBounds.minY)
-                    / viewportBounds.height * visibleFrame.height
-            ),
+            location: backgroundView.convert(sample.location, from: paperController.view),
             timestamp: sample.timestamp,
             force: sample.force,
             altitude: sample.altitude,
@@ -1903,7 +2028,7 @@ private final class PaperKitPDFPageViewController: UIViewController {
         )
     }
 
-    private func makeDottedStrokes(
+    func makeDottedStrokes(
         samples: [PaperKitPencilSample],
         color: UIColor,
         width: CGFloat
@@ -1915,39 +2040,30 @@ private final class PaperKitPDFPageViewController: UIViewController {
         let ink = PKInk(.pen, color: color)
         let pointSize = CGSize(width: width, height: width)
 
-        return locations.enumerated().map { index, location in
-            // A tiny two-point path gives the pen renderer a round, stable dot
-            // while remaining visually stationary at normal and zoomed scale.
-            let epsilon = max(width * 0.015, 0.02)
-            let points = [
+        return locations.map { location in
+            // A substantial spline clipped to a circle survives PencilKit's
+            // path simplification, unlike the former near-zero-length stroke.
+            let points = (0..<4).map { index in
                 PKStrokePoint(
-                    location: location,
-                    timeOffset: 0,
-                    size: pointSize,
-                    opacity: 1,
-                    force: 1,
-                    azimuth: 0,
-                    altitude: .pi / 2
-                ),
-                PKStrokePoint(
-                    location: CGPoint(x: location.x + epsilon, y: location.y),
-                    timeOffset: 0.001,
-                    size: pointSize,
-                    opacity: 1,
-                    force: 1,
-                    azimuth: 0,
-                    altitude: .pi / 2
-                ),
-            ]
+                    location: CGPoint(x: location.x + (CGFloat(index) / 3 - 0.5) * width,
+                                      y: location.y),
+                    timeOffset: Double(index) / 120,
+                    size: pointSize, opacity: 2, force: 1,
+                    azimuth: 0, altitude: .pi / 2
+                )
+            }
             let path = PKStrokePath(
                 controlPoints: points,
-                creationDate: Date(timeIntervalSince1970: TimeInterval(index) * 0.002)
+                creationDate: Date()
             )
-            return PKStroke(ink: ink, path: path)
+            return PKStroke(ink: ink, path: path, mask: UIBezierPath(ovalIn: CGRect(
+                x: location.x - width / 2, y: location.y - width / 2,
+                width: width, height: width
+            )))
         }
     }
 
-    private func makeFixedHighlighterStroke(
+    func makeFixedHighlighterStroke(
         samples: [PaperKitPencilSample],
         color: UIColor,
         width: CGFloat,
@@ -1960,7 +2076,7 @@ private final class PaperKitPDFPageViewController: UIViewController {
                 location: sample.location,
                 timeOffset: max(0, sample.timestamp - startTime),
                 size: CGSize(width: width * 2.8, height: max(width * 0.62, 1)),
-                opacity: opacity,
+                opacity: 2,
                 force: 1,
                 azimuth: azimuth,
                 altitude: .pi / 2
@@ -1979,8 +2095,15 @@ private final class PaperKitPDFPageViewController: UIViewController {
                 )
             )
         }
+        // Repeat end controls to anchor the cubic spline. The pen ink has a
+        // rounded footprint; alpha is applied once on PKInk, never multiplied
+        // into an already translucent native marker.
+        if let first = points.first, let last = points.last {
+            points.insert(first, at: 0)
+            points.append(last)
+        }
         let path = PKStrokePath(controlPoints: points, creationDate: Date())
-        return PKStroke(ink: PKInk(.marker, color: color), path: path)
+        return PKStroke(ink: PKInk(.pen, color: color.withAlphaComponent(opacity)), path: path)
     }
 
     private func evenlySpacedLocations(
@@ -2164,6 +2287,7 @@ private final class PaperKitPDFPageViewController: UIViewController {
 
     @objc
     private func observedNavigationGestureChanged(_ recognizer: UIGestureRecognizer) {
+        observePageBoundary(recognizer)
         let recognizerID = ObjectIdentifier(recognizer)
         switch recognizer.state {
         case .began, .changed:
@@ -2205,6 +2329,36 @@ private final class PaperKitPDFPageViewController: UIViewController {
             activeNavigationRecognizerIDs.remove(recognizerID)
             activePinchRecognizerIDs.remove(recognizerID)
         }
+    }
+
+    private func observePageBoundary(_ recognizer: UIGestureRecognizer) {
+        guard let pan = recognizer as? UIPanGestureRecognizer,
+              pan.view is UIScrollView else { return }
+        let id = ObjectIdentifier(pan)
+        if pan.state == .began, pan.numberOfTouches == 1, !isPinchActive {
+            pageTurnRecognizerID = id
+            pagePanStart = paperController.contentVisibleFrame
+        }
+        if pan.state == .changed, pan.numberOfTouches != 1 || isPinchActive {
+            pageTurnRecognizerID = nil
+        }
+        guard pan.state == .ended, pageTurnRecognizerID == id, !isPinchActive else { return }
+        pageTurnRecognizerID = nil
+        let motion = pan.translation(in: paperController.view)
+        let horizontal = proxy?.horizontalPages == true
+        let delta = horizontal ? motion.x : motion.y
+        let cross = horizontal ? motion.y : motion.x
+        guard abs(delta) > 80, abs(delta) > abs(cross) * 1.3 else { return }
+        let page = backgroundView.bounds
+        let scale = max(currentPresentationScale, 0.01)
+        let tolerance: CGFloat = 18 / scale
+        let atStart = horizontal ? pagePanStart.minX <= page.minX + tolerance
+                                 : pagePanStart.minY <= page.minY + tolerance
+        let atEnd = horizontal ? pagePanStart.maxX >= page.maxX - tolerance
+                               : pagePanStart.maxY >= page.maxY - tolerance
+        guard delta > 0 ? atStart : atEnd else { return }
+        saveMarkup()
+        proxy?.turnPage?(delta < 0 ? 1 : -1)
     }
 
     private var isPinchActive: Bool {

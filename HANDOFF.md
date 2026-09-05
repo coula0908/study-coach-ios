@@ -66,6 +66,13 @@ old version and tag values.
 
 ## In Progress
 
+- New user-authorized 0.1.26 work: automatic ordered saving + annotated PDF
+  export; left tabs/right document actions on one top row; vertical/horizontal
+  page-edge scrolling through More; dotted release disappearance; consistent
+  rounded highlighter output; contact-visible stroke eraser cursor.
+  Investigate tiny two-point dot paths and mismatched marker/preview opacity.
+  Use public Observation for PaperKit changes, not the rejected delegate.
+  CI and physical acceptance pending. 0.1.25 is not accepted for advanced ink.
 - Physical `0.1.24` testing found that its toolbar still participates in the
   vertical layout (the PDF jumps when the context row opens), dark-mode ink
   adaptation makes edited colors appear inverted, native marker azimuth still
