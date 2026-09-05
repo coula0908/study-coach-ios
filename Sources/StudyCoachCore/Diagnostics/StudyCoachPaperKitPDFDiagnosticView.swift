@@ -631,8 +631,8 @@ private struct PaperKitPDFDiagnosticWorkspace: View {
             .frame(minWidth: 488)
         }
         .contentMargins(.horizontal, 6, for: .scrollContent)
+        .frame(width: 500)
         .frame(
-            width: 500,
             minHeight: proxy.paletteState.selectedTool == .image ? 116 : 46,
             maxHeight: proxy.paletteState.selectedTool == .image ? 116 : 46
         )
