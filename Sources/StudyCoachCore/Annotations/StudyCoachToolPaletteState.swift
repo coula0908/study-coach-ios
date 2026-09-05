@@ -104,9 +104,8 @@ struct StudyCoachToolPaletteState: Codable, Equatable, Sendable {
         selectedPenColorSlot = 0
         selectedHighlighterColorSlot = 0
         highlighterOpacity = 0.35
-        // PaperKit's native marker behavior is closest to a 45-degree tip.
-        // Keep that proven native path as the default; selecting 0 or 90
-        // degrees explicitly enables the fixed-angle capture path.
+        // Keep the familiar diagonal tip as the default. Rounded highlighter
+        // strokes now share the same construction at all three angles.
         highlighterAzimuthIndex = 1
         eraserMode = .precision
         penPattern = .solid

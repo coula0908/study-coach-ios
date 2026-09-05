@@ -29,10 +29,12 @@ page scrolling in the top-right More menu. Both marker ends should be rounded.
   instead of a near-zero-length two-point pen path. Preview and commit both use
   the same PencilKit drawing construction. Coordinate conversion uses the actual
   content view's UIView transform, rather than estimated viewport ratios.
-- For explicit 0/90-degree markers, round pen ink gets alpha once (on PKInk),
+- For all three marker angles, round pen ink gets alpha once (on PKInk),
   with point opacity 2. A fixed affine ellipse transform shapes both rounded
   ends; inverse-transformed centreline points keep the stroke on the user's
-  path. Native solid pen and accepted 45-degree marker remain native.
+  path. Solid pen remains native. The 45-degree marker now uses this same
+  rounded pipeline to meet the requested default rounded ends at every angle;
+  its feel must be compared with the accepted former native marker on iPad.
 - Whole-stroke eraser receives a nonpreventing, noncancelling Pencil-contact
   observer, so its circle appears during contact as well as supported hover.
   It represents the requested hit width; native whole-stroke semantics still

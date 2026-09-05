@@ -1756,7 +1756,7 @@ final class PaperKitPDFPageViewController: UIViewController {
               state != lastAppliedPaletteState else { return }
 
         let usesCustomInkCapture = state.selectedTool == .pen && state.penPattern == .dotted
-            || state.selectedTool == .highlighter && state.highlighterAzimuthIndex != 1
+            || state.selectedTool == .highlighter
         customInkPreviewState = usesCustomInkCapture ? state : nil
         customInkRecognizer?.isEnabled = usesCustomInkCapture
         paperController.isEditable = !usesCustomInkCapture
