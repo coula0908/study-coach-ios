@@ -37,7 +37,7 @@ final class PaperKitInkRegressionTests: XCTestCase {
         let data = try await markup.dataRepresentation()
         let restored = try PaperMarkup(dataRepresentation: data)
         let image = try await render(restored)
-        XCTAssertGreaterThan(try alphaSum(image), 3000)
+        XCTAssertGreaterThan(try exportedPixelCounts(image).ink, 15)
     }
 
     func testRoundedHighlighterUsesOneOpacityFactorAtBothAngles() throws {
@@ -88,7 +88,7 @@ final class PaperKitInkRegressionTests: XCTestCase {
         try await PaperKitOrderedSave.flush()
         let saved = try PaperMarkup(dataRepresentation: Data(contentsOf: url))
         let savedImage = try await render(saved)
-        XCTAssertGreaterThan(try alphaSum(savedImage), 3000)
+        XCTAssertGreaterThan(try exportedPixelCounts(savedImage).ink, 15)
         let output = try await PaperKitAnnotatedExport.make(
             document: document, documentID: identity, name: "test.pdf")
         let exported = try XCTUnwrap(PDFDocument(url: output))
