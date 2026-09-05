@@ -1556,8 +1556,6 @@ final class PaperKitPDFPageViewController: UIViewController {
     private let eraserCursorLayer = CAShapeLayer()
     private var eraserCursorDiameter: CGFloat = 24
     private var showsStrokeEraserCursor = false
-    private var observingMarkup = false
-    private var pageTurnCandidate: Int = 0
     private var pageTurnRecognizerID: ObjectIdentifier?
     private var pagePanStart = CGRect.null
 
@@ -1713,6 +1711,11 @@ final class PaperKitPDFPageViewController: UIViewController {
     @objc
     private func applicationDidEnterBackground() {
         saveMarkup()
+        let backgroundTask = UIApplication.shared.beginBackgroundTask(withName: "Save notes")
+        Task { @MainActor in
+            _ = try? await PaperKitOrderedSave.flush()
+            if backgroundTask != .invalid { UIApplication.shared.endBackgroundTask(backgroundTask) }
+        }
     }
 
     func saveMarkup() {
@@ -1735,7 +1738,6 @@ final class PaperKitPDFPageViewController: UIViewController {
     }
 
     private func observeMarkupChanges() {
-        observingMarkup = true
         withObservationTracking {
             _ = paperController.markup
         } onChange: { [weak self] in

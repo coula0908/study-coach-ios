@@ -45,6 +45,7 @@ enum PaperKitAnnotatedExport {
               let context = CGContext(consumer: consumer, mediaBox: nil, nil) else {
             throw CocoaError(.fileWriteUnknown)
         }
+        defer { context.closePDF() }
         for index in 0..<document.pageCount {
             guard let page = document.page(at: index) else { continue }
             let source = page.bounds(for: .cropBox)
@@ -73,7 +74,6 @@ enum PaperKitAnnotatedExport {
             context.endPDFPage()
             await Task.yield()
         }
-        context.closePDF()
         return output
     }
 }

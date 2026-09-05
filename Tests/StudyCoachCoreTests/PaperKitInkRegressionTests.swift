@@ -65,6 +65,38 @@ final class PaperKitInkRegressionTests: XCTestCase {
         return UIImage(cgImage: try XCTUnwrap(context.makeImage()))
     }
 
+    func testOrderedSaveAndAnnotatedPDFExport() async throws {
+        let identity = "test-\(UUID().uuidString)"
+        let url = PaperKitPDFDiagnosticStorage.markupURL(for: identity, pageIndex: 0)
+        let source = UIGraphicsPDFRenderer(bounds: CGRect(x: 0, y: 0, width: 100, height: 100))
+            .pdfData { context in
+                context.beginPage()
+                UIColor.blue.setFill()
+                context.fill(CGRect(x: 10, y: 10, width: 10, height: 10))
+                context.beginPage()
+            }
+        let document = try XCTUnwrap(PDFDocument(data: source))
+        let empty = PaperMarkup(bounds: CGRect(x: 0, y: 0, width: 200, height: 200))
+        var latest = empty
+        latest.append(contentsOf: PKDrawing(strokes: try editor().makeDottedStrokes(
+            samples: samples, color: .black, width: 6)))
+        _ = PaperKitOrderedSave.enqueue(empty, to: url)
+        _ = PaperKitOrderedSave.enqueue(latest, to: url)
+        try await PaperKitOrderedSave.flush()
+        let saved = try PaperMarkup(dataRepresentation: Data(contentsOf: url))
+        let savedImage = try await render(saved)
+        XCTAssertGreaterThan(try alphaSum(savedImage), 3000)
+        let output = try await PaperKitAnnotatedExport.make(
+            document: document, documentID: identity, name: "test.pdf")
+        let exported = try XCTUnwrap(PDFDocument(url: output))
+        XCTAssertEqual(exported.pageCount, 2)
+        XCTAssertEqual(exported.page(at: 0)?.bounds(for: .mediaBox).size,
+                       CGSize(width: 100, height: 100))
+        let page = try XCTUnwrap(exported.page(at: 0))
+        let image = page.thumbnail(of: CGSize(width: 200, height: 200), for: .mediaBox)
+        XCTAssertNotNil(image.cgImage)
+    }
+
     private func alphaSum(_ image: UIImage) throws -> Int {
         let image = try XCTUnwrap(image.cgImage)
         let context = try XCTUnwrap(CGContext(data: nil, width: image.width, height: image.height,
