@@ -34,10 +34,11 @@ old version and tag values.
 - Repository: `https://github.com/coula0908/study-coach-ios`
 - Active local branch: `codex/paperkit-adaptive-background`
 - Remote development branch: `main`
-- Latest installable package tag: `0.1.24`
-- Latest runtime implementation commit: `879dda5` — persistent document tabs,
-  centered primary/context tool rows, width sliders, exact marker azimuth, and
-  vector-eraser width correction
+- Latest installable package tag: `0.1.24`; source is preparing the `0.1.25`
+  physical candidate
+- Latest runtime implementation commit: `b603868` — floating toolbar,
+  Pencil-only dotted/fixed-angle paths, light-stable colors, corrected eraser
+  widths/cursor, and newest-first PhotoKit tray
 - Latest researched toolbar-design commit: `1a14d92` — StudyCoach-owned exact
   native tools, direct Pencil interactions, structured insertion, and feature
   capability boundaries
@@ -51,19 +52,16 @@ old version and tag values.
 - `0.1.23` annotated tag target commit: `9556872` — compact toolbox physical
   test candidate after full Apple CI success
 - `0.1.24` annotated tag target commit: `e6f375f` — document tabs and
-  contextual tool controls physical test candidate after full Apple CI success
+  contextual tool controls; physical testing found the defects now addressed
+  by `0.1.25`
 - Package/module: `StudyCoachCore`
 - Production entry point: `StudyCoachRootView()`
 - Current isolated candidate entry point:
   `StudyCoachPaperKitPDFDiagnosticView()` on iPadOS 26 or later
-- Source version `0.1.24` keeps the accepted PaperKit editor/renderer and is an
-  working-tree toolbar correction candidate. It adds persistent top document
-  tabs, centered larger tool icons, a toggleable tool-settings row, width
-  sliders, explicit marker azimuth construction, and a nonzero vector-eraser
-  width. Windows validation and GitHub Actions run `33917015064` pass Xcode 16
-  fallback, Xcode 26 normal and strict Swift 6 builds, and both iPad Simulator
-  jobs. Annotated package tag `0.1.24` points to `e6f375f`; physical iPadOS 26
-  acceptance is still pending.
+- Source version `0.1.25` keeps the accepted PaperKit editor and `0.1.19`
+  renderer. GitHub Actions run `33947081676` passes Xcode 16 fallback, Xcode 26
+  normal and strict Swift 6 builds, and both iPad Simulator jobs. The source
+  still needs a final version-record commit/tag and physical iPadOS 26 testing.
 
 ## In Progress
 
@@ -94,6 +92,19 @@ old version and tag values.
   `PKStrokePath`, and `PKStroke` values and append it to `PaperMarkup` after an
   isolated Pencil-only patterned stroke. Record this as an experimental tool
   until physical latency, coordinates, undo, erase, and persistence pass.
+- Implementation is now compiled in `b603868`. The solid pen and 45-degree
+  marker retain native PaperKit input. Dotted pen and explicit 0/90-degree
+  marker use the isolated capture above; finger input still belongs to
+  PaperKit. Color editing is resolved under light appearance. Partial and
+  precision erasers both use adjustable fixed-width bitmap input; precision
+  is 35% of the selected width; vector mode has toolbar and Pencil-hover range
+  feedback. PhotoKit shows 18 newest-first assets and retains PhotosPicker and
+  Files fallbacks.
+- `0.1.25` Windows validation, Xcode 16 and Xcode 26 normal builds, strict Swift
+  6 compilation, and both iPad Simulator jobs pass in Actions run
+  `33947081676`. Physical acceptance remains required, especially custom
+  gesture arbitration, dotted undo/whole-stroke semantics, fixed marker shape,
+  Pencil hover, and Photo Library capability behavior.
 - `0.1.23` physical use confirmed that the compact controls still consume
   space inefficiently and exposed three concrete defects: the ten separate
   width targets are hard to tap, the marker's visible tip angle remains 45
@@ -165,8 +176,9 @@ old version and tag values.
   updated:
   `0.1.20` minimal custom-tool bridge, `0.1.21` complete note-style toolbar,
   `0.1.22` launch hotfix, `0.1.23` compact toolbar refinement, `0.1.24`
-  document-tab/context-row correction, `0.1.25` PDF geometry normalization,
-  `0.1.26` autosave/recovery, and only
+  document-tab/context-row correction, `0.1.25` floating advanced-tool
+  correction, `0.1.26` PDF geometry normalization, `0.1.27` autosave/recovery,
+  and only
   then `0.2.0` promotion into `StudyCoachRootView()`. Later phases add the
   library/page model, editing/export, study/OCR, audio/sync, and AI. Keep one
   risky subsystem per physical-device test version.

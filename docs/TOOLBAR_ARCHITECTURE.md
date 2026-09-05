@@ -1,6 +1,6 @@
 # StudyCoach 자체 툴바와 확장 필기 기능 설계
 
-상태: **`0.1.24` 문서 탭·주 도구줄·도구별 설정줄 구현 중**
+상태: **`0.1.25` 플로팅 도구줄·점선·지우개·최근 사진 실기 후보**
 최종 조사일: 2026-09-05
 
 ## 확인된 기준선
@@ -63,6 +63,9 @@ Goodnotes의 Active Tool Menu와 Notability의 도구별 프리셋 방식을
   표시한다.
 - 문서명은 최상단의 스크롤 가능한 열린 문서 탭에 놓고, 주 도구와
   설정은 화면 끝까지 불필요하게 채우지 않는 가운데 정렬 캡슐로 둔다.
+- 문서 탭과 두 도구줄은 PDF 위에 떠 있는 하나의 오버레이 계층이다.
+  설정줄의 삽입·제거는 편집기 레이아웃을 다시 계산하지 않으므로 PDF의
+  fit, 좌표, 화면상 위치를 바꾸지 않는다.
 
 ## 상태와 책임 분리
 
@@ -123,22 +126,24 @@ StudyCoachToolStore (정밀 설정과 프리셋의 기준)
 
 ### 3. 형광펜 기울기
 
-**공개 API상 가능하지만 물리 기기 확인이 필요한 기능이다.**
+**native 기본 각도만으로는 고정할 수 없어, 비기본 각도는 별도 공개
+획 모델 경로로 물리 기기 확인이 필요한 기능이다.**
 
-- `PKInkingTool(.marker, color:width:azimuth:)`의 기본 `azimuth`를
-  StudyCoach가 직접 지정한다.
+- `PKInkingTool(.marker, color:width:azimuth:)`의 `azimuth`는 입력 표본의
+  실시간 Pencil 각도와 결합되는 기본값이므로, 값을 넣는 것만으로 0도나
+  90도를 고정할 수 없다는 것이 `0.1.24` 실기에서 확인됐다.
 - 첫 UI는 0°, 45°, 90° 세 프리셋과 상세 슬라이더를 제공한다.
-- 이 값은 마커 펜촉의 기본 방향이다. Apple Pencil을 실제로 기울일 때
-  들어오는 실시간 각도와 필압은 계속 PencilKit가 처리한다.
-- marker가 세 각도를 눈에 띄게 구분하는지, 방향 전환 때 필기감과
-  기존 PaperMarkup 복원이 같은지는 iPad에서 별도 A/B 시험한다.
+- 45도는 이미 합격한 native marker를 유지한다. 0도와 90도는 Pencil-only
+  표본을 페이지 좌표로 바꾸고 고정된 `PKStrokePoint.azimuth`와 납작한
+  크기로 `PKStroke`를 구성해 PaperMarkup에 추가한다.
+- 세 각도의 모양, 지연, undo, 지우기와 복원은 실제 iPad에서 A/B한다.
 
 ### 4. 부분·획 지우개와 범위
 
 **기본 엔진을 그대로 사용해 구현 가능하다.**
 
 - 정밀 지우개: `.fixedWidthBitmap` + 폭 슬라이더
-- 부분 지우개: `.bitmap` + 폭 슬라이더
+- 부분 지우개: `.fixedWidthBitmap` + 선택 폭 슬라이더
 - 획 지우개: `.vector` + 폭 슬라이더
 - 각 종류의 `validWidthRange` 안에서 10단계 또는 연속 폭을 제공한다.
   획 지우개도 충돌 판정 폭을 직접 정할 수 있으므로 Apple UI에 폭
@@ -221,16 +226,16 @@ azimuth이며 dash pattern은 없다. Goodnotes와 Notability가 점선·파선�
 
 우선순위는 다음과 같다.
 
-1. PaperKit의 구조화 직선/도형에서 파선 스타일이 현재 SDK에 노출되는지
-   확인한다. 가능하면 직선과 도형의 점선부터 공식 엔진으로 제공한다.
-2. 자유 필기는 PencilKit의 완료된 `PKStroke`를 일정 거리로 나누거나
-   mask 처리하면서 `renderState`와 `renderGroupID`를 보존하는 격리 시험을
-   한다.
-3. 이 방식은 쓰는 동안 실선이었다가 손을 뗀 뒤 점선으로 바뀌거나,
-   지우개·라쏘·undo·저장과 충돌할 수 있다. 그런 문제가 하나라도 있으면
-   현재 만족한 필기감을 희생해 넣지 않는다.
-4. 처음부터 별도 터치 수집/Metal 필기 엔진을 만드는 선택은 마지막
-   수단이다. 현재 목표인 빠른 공부 시작과 맞지 않는다.
+1. 조사 결과 `PKInkingTool`과 현재 PaperKit 구조화 선 API에는 자유 필기
+   dash 속성이 없고, `PaperMarkup.subelements`는 iPadOS 27부터라 iPadOS 26에서
+   완료된 native 획을 꺼내 후처리할 수도 없다.
+2. `0.1.25`는 점선이 선택된 동안에만 Pencil-only 표본을 받고, Apple의
+   공개 `PKStrokePoint`·`PKStrokePath`·`PKStroke`로 일정 간격의 점을 만든
+   `PKDrawing`을 `PaperMarkup.append(contentsOf:)`로 추가한다. 손가락 pan과
+   pinch는 계속 PaperKit가 전담한다.
+3. 실선은 기존 native 입력을 전혀 바꾸지 않는다. 점선의 지연, 좌표,
+   undo, 획 지우개 단위와 재실행 복원은 물리 기기에서 합격해야 한다.
+4. 별도 Metal 엔진이나 외부 패키지는 추가하지 않았다.
 
 ## 프리셋 데이터 초안
 

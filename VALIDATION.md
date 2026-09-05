@@ -26,7 +26,14 @@
 - Document-tab/context-row candidate: `0.1.24` preserves the accepted editor
   and renderer while correcting the reported toolbar interaction defects;
   Windows validation and the full Apple CI matrix pass; physical Swift
-  Playgrounds acceptance is pending
+  Playgrounds found PDF relayout, color inversion, marker-angle, eraser-range,
+  and palette-density defects
+- Floating advanced-tools candidate: `0.1.25` keeps the accepted PDF renderer
+  and solid-ink path, floats both tool rows above the PDF, adds dotted ink and
+  fixed non-default marker angles through public PencilKit stroke models,
+  corrects edited color appearance and eraser sizing, and adds a recent-photo
+  strip; Windows validation plus Xcode 16/26, strict Swift 6, and both iPad
+  Simulator jobs pass; physical Swift Playgrounds acceptance is pending
 - Native PDFKit/PencilKit revision: Xcode 16.4 and Xcode 26.6 builds and iPad
   Simulator tests passed on 2026-09-02; the `0.1.7` physical iPadOS 26 retest
   confirmed the delegate crash is fixed and Apple Pencil writing works, but
@@ -35,6 +42,57 @@
 
 Do not mark the MVP complete until the native Pencil input path and the
 remaining acceptance checks pass in Swift Playgrounds on the target iPad.
+
+## Floating advanced tools and recent photos: 0.1.25
+
+- Date: 2026-09-05
+- Physical input: `0.1.24` runs, but toggling its context row moves the PDF;
+  ColorPicker choices appear inverted; 0/90-degree marker choices do not lock
+  the tip; partial and whole-stroke eraser range feedback is incomplete; the
+  two rows are poorly balanced; and Image lacks a recent-gallery tray
+- Layout: the PDF/editor is the base of a top-aligned `ZStack`; document tabs,
+  the 520-point primary row, and the 500-point context row are overlay content.
+  The rows are independently scrollable and center content shorter than their
+  available width. Context-row insertion no longer changes editor bounds.
+- Color: ColorPicker output is resolved using a light trait collection, and
+  the fixed-white-page PaperKit controller is forced to light appearance. This
+  prevents semantic dark-mode ink inversion while preserving explicit RGBA
+  palette storage.
+- Dotted pen: PencilKit has no public dash pattern and iPadOS 26 cannot inspect
+  `PaperMarkup.subelements`. A Pencil-only recognizer captures only dotted
+  input and builds evenly spaced public `PKStroke` dots in page coordinates;
+  the resulting `PKDrawing` is appended to the current `PaperMarkup`. Solid pen
+  input remains the accepted native PaperKit path.
+- Marker angle: 45 degrees remains native. Explicit 0/90-degree choices use
+  constructed marker stroke points with fixed azimuth because native marker
+  output also incorporates the Pencil's live angle.
+- Erasers: visible labels are **전체/획**, **부분**, and **정밀**; partial and
+  precision use controllable `fixedWidthBitmap` widths, precision uses 35% of
+  the selected partial diameter, and whole-stroke mode gets a selected-size
+  toolbar sample plus a hover circle on compatible Pencil/iPad hardware.
+- Images: with the host playground's Photo Library capability, direct PhotoKit
+  fetches up to 18 image assets newest first and shows 54-point thumbnails;
+  tapping inserts original data. **파일에서 불러오기** is below the strip.
+  Without the capability/purpose string, no direct permission request is made
+  and the system PhotosPicker remains available.
+- External code: none copied; no package dependency added. The implementation
+  follows the public Apple PencilKit/PaperKit/PhotoKit model and Goodnotes'
+  documented recent-photos plus Insert-from interaction.
+- Unchanged: PDF crop/rotation logic, PaperKit viewport ownership, base/detail
+  renderer, pan/pinch tile policy, document identity, and previous PaperMarkup
+  files
+- Windows repository validation and `git diff --check`: passed
+- Workflow run:
+  <https://github.com/coula0908/study-coach-ios/actions/runs/33947081676>
+- Xcode 16 fallback build and iPad Simulator tests: passed
+- Xcode 26 normal build, strict Swift 6 concurrency build, and iPad Simulator
+  tests: passed
+- Physical Swift Playgrounds compilation and behavior: pending
+- Required physical checks: no PDF movement while toggling row; black/white and
+  edited colors match; solid and dotted pen both write at fit and maximum zoom;
+  dotted output persists and participates in undo/redo/three erasers; 0/45/90
+  marker angles are visibly distinct; each eraser width changes; recent photos
+  are newest first and file import still works; fingers still pan/pinch
 
 ## Document tabs and contextual tool controls: 0.1.24
 

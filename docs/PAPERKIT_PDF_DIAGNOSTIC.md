@@ -31,12 +31,16 @@ struct ContentView: View {
 }
 ```
 
-Use the **PDF 열기** button to choose a study PDF. The `0.1.20` test toolbar has
-a **StudyCoach / Apple** segmented control. StudyCoach mode keeps the system
-picker active but offscreen and exposes only pen, highlighter, eraser, undo,
-and redo. Apple mode shows the same active system picker for direct A/B
-comparison. The renderer and PaperMarkup controller are identical in both
-modes.
+Use the **PDF 열기** button to choose a study PDF. In `0.1.25`, document tabs
+and two independently scrollable StudyCoach tool rows float over the PDF.
+Selecting the current tool toggles its setting row without changing the PDF
+viewport. The system picker is not the source of tool values.
+
+For the recent-image strip, open the playground's **App Settings →
+Capabilities**, add **Photo Library**, and run again. If that host capability
+is absent, tapping Image shows an inline permission-setting notice; tapping it
+still opens Apple's system Photos picker, and **파일에서 불러오기** remains
+available below it.
 
 ## Physical iPadOS 26 checklist
 
@@ -63,6 +67,30 @@ modes.
 16. Test the added thin pen and thin highlighter, Apple's default tools,
     eraser modes, undo/redo, Pencil double-tap, and line hold.
 17. Confirm the original `StudyCoachRootView()` still opens the existing app unchanged.
+
+## Version 0.1.25 advanced-tool checklist
+
+1. Open/close the second row repeatedly and confirm the PDF never changes
+   position, fit, zoom, or visible area.
+2. Confirm the first and second rows are nearly the same length, their short
+   contents are centered, and both can scroll horizontally when needed.
+3. Edit a pen slot to black, white, red, and blue. The swatch and new ink must
+   match on the white PDF in both light and dark system appearance.
+4. Write a solid line and a dotted line at fit scale and maximum zoom. Solid
+   input should retain the accepted PaperKit feel; dotted output must align to
+   the same page coordinates and remain sharp.
+5. Undo/redo a dotted gesture, change pages, relaunch, and erase its dots with
+   all three eraser modes. Record if whole-stroke erasing removes one dot or the
+   complete dotted gesture.
+6. Compare highlighter 0°, 45°, and 90°. Verify 0° and 90° now visibly differ,
+   and report whether their latency or stroke correction differs from native
+   45°.
+7. Move the eraser width slider in **전체/획**, **부분**, and **정밀**. On an
+   Apple Pencil hover-capable iPad, verify the whole-stroke hit circle appears;
+   on other hardware, use the toolbar size sample and actual hit behavior.
+8. Open Image. Verify recent gallery images are newest first, tapping one
+   inserts the original, and **파일에서 불러오기** still works.
+9. Confirm one-finger pan and two-finger pinch never create ink in any mode.
 
 ## Version 0.1.20 custom-toolbar A/B checklist
 

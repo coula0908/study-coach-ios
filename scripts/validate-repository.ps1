@@ -93,8 +93,8 @@ if ($rootView.Contains('StudyCoachPaperKitDiagnosticView')) {
     throw 'StudyCoachRootView must not route production users into the PaperKit diagnostic.'
 }
 
-if (-not $versionDocument.Contains('Current package version: `0.1.24`')) {
-    throw 'VERSION.md must identify the source tree as package version 0.1.24.'
+if (-not $versionDocument.Contains('Current package version: `0.1.25`')) {
+    throw 'VERSION.md must identify the source tree as package version 0.1.25.'
 }
 
 if ($rootView.Contains('StudyCoachPaperKitPDFDiagnosticView')) {
@@ -147,6 +147,15 @@ foreach ($requiredPaperKitPDFText in @(
     '.withAlphaComponent('
     'insertNewTextbox('
     'insertNewImage('
+    'PaperKitPencilStrokeRecognizer'
+    'markup.append(contentsOf: PKDrawing(strokes: strokes))'
+    'StudyCoachPenPattern'
+    'PaperKitRecentPhotoLibrary'
+    'NSPhotoLibraryUsageDescription'
+    'PHAsset.fetchAssets(with: .image'
+    'overrideUserInterfaceStyle = .light'
+    'UIHoverGestureRecognizer('
+    'case .partial: .fixedWidthBitmap'
 )) {
     if (-not $paperKitPDFDiagnostic.Contains($requiredPaperKitPDFText)) {
         throw "PaperKit PDF diagnostic is missing: $requiredPaperKitPDFText"

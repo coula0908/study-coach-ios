@@ -1,5 +1,39 @@
 # Changelog
 
+## 0.1.25 — Floating palette, patterned ink, and recent photos
+
+- Place the document tabs and both tool rows in a true overlay above the PDF;
+  expanding or collapsing a tool's second row no longer changes the PDF
+  viewport, fit, or vertical position.
+- Keep the 520-point primary row and 500-point contextual row centered and
+  independently horizontally scrollable, including when their contents are
+  wider than the visible palette.
+- Add solid and dotted pen choices. Because PencilKit has no public dash
+  property and PaperKit cannot expose its strokes on iPadOS 26, dotted input
+  uses a Pencil-only recognizer and Apple's public `PKStrokePoint`,
+  `PKStrokePath`, `PKStroke`, `PKDrawing`, and
+  `PaperMarkup.append(contentsOf:)` model path. Fingers remain PaperKit pan and
+  zoom input.
+- Keep the accepted native PaperKit/PencilKit path for the solid pen and
+  45-degree marker. Construct 0- and 90-degree marker paths with a fixed
+  point azimuth so those settings are no longer overridden by the live Pencil
+  angle.
+- Resolve edited colors in a light trait environment and keep the white-PDF
+  editor in light appearance so black, white, and other chosen RGB values do
+  not turn into their dark-mode semantic counterparts.
+- Label the erasers as **전체/획**, **부분**, and **정밀**. Make both partial
+  modes predictable fixed-width bitmap erasers, keep precision proportionally
+  narrower, show a size sample in the toolbar, and add a Pencil-hover hit-range
+  cursor for whole-stroke erasing on hover-capable iPads.
+- Add a Goodnotes-style image tray: the newest PhotoKit image assets appear
+  first below the Image button, and **파일에서 불러오기** remains below the
+  thumbnail strip. If the consumer playground lacks the Photo Library
+  capability, the app avoids requesting unsafe direct access and offers the
+  system Photos picker instead.
+- Preserve the accepted PDF geometry, adaptive page renderer, tile cache,
+  document identity, and existing PaperMarkup files. No external package or
+  third-party source code was added.
+
 ## 0.1.24 — Document tabs and contextual tool controls
 
 - Move open PDF names into a persistent, horizontally scrollable document-tab
