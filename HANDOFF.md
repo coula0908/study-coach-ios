@@ -34,7 +34,8 @@ old version and tag values.
 - Repository: `https://github.com/coula0908/study-coach-ios`
 - Active local branch: `codex/paperkit-adaptive-background`
 - Remote development branch: `main`
-- Latest installable package tag: `0.1.25`
+- Latest installable package tag: `0.1.26` at `2c6ec63` (annotated Git tag pushed;
+  no GitHub Release object created)
 - Latest runtime implementation commit: `2b08ee5` — ordered automatic saves,
   annotated PDF export, top actions, directional page-edge navigation,
   persistent dotted ink, rounded marker at all angles, and contact eraser cursor.
@@ -61,8 +62,8 @@ old version and tag values.
   `StudyCoachPaperKitPDFDiagnosticView()` on iPadOS 26 or later
 - Source version `0.1.26` uses the accepted `0.1.19` PDF renderer. Final runtime
   `2b08ee5` passed GitHub Actions run `33949232646` (Xcode 16 fallback, Xcode 26
-  normal/strict Swift 6, both iPad Simulator jobs). Prepare annotated 0.1.26
-  candidate tag; physical iPad testing is pending. 0.1.25 had reported failures.
+  normal/strict Swift 6, both iPad Simulator jobs). Annotated 0.1.26 tag is pushed
+  at `2c6ec63`; physical iPad testing is pending. 0.1.25 had reported failures.
 
 ## In Progress
 

@@ -22,6 +22,7 @@
   Xcode 26 normal and strict Swift 6 compilation, and both iPad Simulator jobs.
   https://github.com/coula0908/study-coach-ios/actions/runs/33949232646
   Physical Swift Playgrounds acceptance remains pending.
+- Annotated Git tag `0.1.26` pushed at `2c6ec63`; no GitHub Release object.
 - References and known limits: `docs/EDITOR_0_1_26.md`.
 
 ## Current status
